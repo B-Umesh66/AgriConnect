@@ -8,6 +8,7 @@ const storageRoutes = require('./routes/storageRoutes');
 const farmerRoutes = require('./routes/farmerRoutes');
 const buyerRoutes = require('./routes/buyerRoutes');
 const csOwnerRoutes = require('./routes/csOwnerRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const port = 5500;
 
@@ -27,8 +28,7 @@ app.use('/api/cold-storages', storageRoutes);
 app.use('/api/farmers', farmerRoutes);
 app.use('/api/buyers', buyerRoutes);
 app.use('/api/cs_owners', csOwnerRoutes);
-
-// (All old app.post blocks are now completely removed!)
+app.use('/api/auth', authRoutes);
 
 if (require.main === module) {
     connectDB().then(() => {

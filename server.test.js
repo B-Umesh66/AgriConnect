@@ -33,6 +33,24 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(201);
             testFarmerId = res.body.farmerId;
         });
+        it('should login the farmer using a phone number (POST /login)', async () => {
+            const res = await request(app).post('/api/auth/login').send({
+                identifier: "9876543210", 
+                password: "securepassword123",
+                userType: "Farmer"
+            });
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toHaveProperty('token');
+            expect(res.body.role).toBe('Farmer');
+        });
+        it('should reject login with an unregistered phone number', async () => {
+            const res = await request(app).post('/api/auth/login').send({
+                identifier: "0000000000",
+                password: "securepassword123",
+                userType: "Farmer"
+            });
+            expect(res.statusCode).toEqual(400);
+        });
         it('should fetch all farmers (GET /)', async () => {
             const res = await request(app).get('/api/farmers');
             expect(res.statusCode).toEqual(200);
@@ -59,6 +77,24 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(201);
             testBuyerId = res.body.buyerId;
         });
+        it('should login the buyer using an email (POST /login)', async () => {
+            const res = await request(app).post('/api/auth/login').send({
+                identifier: "ravi.test@example.com",
+                password: "securepassword123",       
+                userType: "Buyer"
+            });
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toHaveProperty('token');
+            expect(res.body.role).toBe('Buyer');
+        });
+        it('should reject login with an unregistered email', async () => {
+            const res = await request(app).post('/api/auth/login').send({
+                identifier: "raju.test@example.com",
+                password: "securepassword123",
+                userType: "Buyer"
+            });
+            expect(res.statusCode).toEqual(400);
+        });
         it('should fetch all buyers (GET /)', async () => {
             const res = await request(app).get('/api/buyers');
             expect(res.statusCode).toEqual(200);
@@ -84,6 +120,24 @@ describe('AgriConnect API Endpoints', () => {
             const res = await request(app).post('/api/cs_owners').send(newCSOwner);
             expect(res.statusCode).toEqual(201);
             testCSOwnerId = res.body.cs_ownerId;
+        });
+        it('should login the cold storage owner (POST /login)', async () => {
+            const res = await request(app).post('/api/auth/login').send({
+                identifier: "madhav.test@example.com", 
+                password: "securePassword123",
+                userType: "Cold Storage Owner"
+            });
+            expect(res.statusCode).toEqual(200);
+            expect(res.body).toHaveProperty('token');
+            expect(res.body.role).toBe('Cold Storage Owner');
+        });
+        it('should reject login with an unregistered email', async () => {
+            const res = await request(app).post('/api/auth/login').send({
+                identifier: "rakesh.test@example.com",
+                password: "securepassword123", 
+                userType: "Cold Storage Owner"
+            });
+            expect(res.statusCode).toEqual(400);
         });
         it('should fetch all CS owners (GET /)', async () => {
             const res = await request(app).get('/api/cs_owners');
