@@ -232,6 +232,23 @@ describe('AgriConnect API Endpoints', () => {
         });
     });
 
+    // --- MARKET API TESTS ---
+    describe('Market API', () => {
+        it('should fetch live market prices from Agmarknet ', async () => {
+            const res = await request(app).get('/api/market/prices').query({
+                commodity: 'Tomato',
+                state: 'Andhra Pradesh',
+                district: 'Chittoor'
+            });
+            
+            expect(res.statusCode).toEqual(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body).toHaveProperty('date_fetched');
+            expect(res.body).toHaveProperty('records');
+            expect(Array.isArray(res.body.records)).toBe(true);
+        });
+    });
+
     afterAll(async () => {
         // Failsafe cleanup: Just in case a test fails before hitting the DELETE endpoints, 
         // this ensures our database stays clean for the next test run.

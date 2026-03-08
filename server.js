@@ -9,6 +9,7 @@ const farmerRoutes = require('./routes/farmerRoutes');
 const buyerRoutes = require('./routes/buyerRoutes');
 const csOwnerRoutes = require('./routes/csOwnerRoutes');
 const authRoutes = require('./routes/authRoutes');
+const marketRoutes = require('./routes/marketRoutes');
 
 const port = 5500;
 
@@ -29,6 +30,7 @@ app.use('/api/farmers', farmerRoutes);
 app.use('/api/buyers', buyerRoutes);
 app.use('/api/cs_owners', csOwnerRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/market', marketRoutes);
 
 if (require.main === module) {
     connectDB().then(() => {
