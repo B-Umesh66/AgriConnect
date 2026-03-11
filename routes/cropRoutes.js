@@ -5,7 +5,7 @@ const { client } = require('../db');
 const router = express.Router();
 
 // 1. POST: Create a new crop
-router.post('/', async (req, res) => {
+router.post('/add', async (req, res) => {
     try {
         const cropData = {
             ...req.body,

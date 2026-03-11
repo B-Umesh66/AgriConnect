@@ -5,7 +5,7 @@ const { client } = require('../db');
 const router = express.Router();
 
 // 1. POST: Add a new cold storage facility
-router.post('/', async (req, res) => {
+router.post('/add', async (req, res) => {
     try {
         const results = await client.db("AgriDB").collection("cold storages").insertOne(req.body); 
         res.status(201).json({

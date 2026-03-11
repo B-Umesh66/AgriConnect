@@ -29,7 +29,7 @@ describe('AgriConnect API Endpoints', () => {
     describe('Farmer API', () => {
         it('should register a new farmer (POST)', async () => {
             const newFarmer = { name: "Ramesh Kumar", contact: "9876543210", email: "ramesh.test@example.com", password: "securepassword123", no_of_acres: 5, address: { d_no: "4-45/2", village: "Annavaram", mandal: "Sankhavaram", district: "Kakinada", state: "Andhra Pradesh", pincode: "533406" } };
-            const res = await request(app).post('/api/farmers').send(newFarmer);
+            const res = await request(app).post('/api/farmers/add').send(newFarmer);
             expect(res.statusCode).toEqual(201);
             testFarmerId = res.body.farmerId;
         });
@@ -73,7 +73,7 @@ describe('AgriConnect API Endpoints', () => {
     describe('Buyer API', () => {
         it('should register a new buyer (POST)', async () => {
             const newBuyer = { name: "Ravi Kumar", contact: "9293472399", email: "ravi.test@example.com", password: "securepassword123", address: { d_no: "12-3B", village: "Velangi", mandal: "Pithapuram", district: "Kakinada", state: "Andhra Pradesh", pincode: "533450" } };
-            const res = await request(app).post('/api/buyers').send(newBuyer);
+            const res = await request(app).post('/api/buyers/add').send(newBuyer);
             expect(res.statusCode).toEqual(201);
             testBuyerId = res.body.buyerId;
         });
@@ -117,7 +117,7 @@ describe('AgriConnect API Endpoints', () => {
     describe('CS Owner API', () => {
         it('should return a new cold storage owner (POST)', async () => {
             const newCSOwner = { name: "Madhav", contact: "9934561245", email: "madhav.test@example.com", password: "securePassword123" }
-            const res = await request(app).post('/api/cs_owners').send(newCSOwner);
+            const res = await request(app).post('/api/cs_owners/add').send(newCSOwner);
             expect(res.statusCode).toEqual(201);
             testCSOwnerId = res.body.cs_ownerId;
         });
@@ -160,7 +160,7 @@ describe('AgriConnect API Endpoints', () => {
     // --- CROP API TESTS ---
     describe('Crop API', () => {
         it('should list a new crop (POST)', async() => {
-            const res = await request(app).post('/api/crops').send({ farmerId: "Dummy farmer ID 123", crop_name: "Test rice", quantity: 50, expected_price: 25000 });
+            const res = await request(app).post('/api/crops/add').send({ farmerId: "Dummy farmer ID 123", crop_name: "Test rice", quantity: 50, expected_price: 25000 });
             expect(res.statusCode).toEqual(201);
             testCropId = res.body.cropId; 
         });
@@ -185,7 +185,7 @@ describe('AgriConnect API Endpoints', () => {
     // --- BID API TESTS ---
     describe('Bid API', () => {
         it('should register a new bid (POST)', async() => {
-            const res = await request(app).post('/api/bids').send({ buyerId: "Dummy buyer 123", cropId: "Dummy crop id", bid_amount: 50000 });
+            const res = await request(app).post('/api/bids/add').send({ buyerId: "Dummy buyer 123", cropId: "Dummy crop id", bid_amount: 50000 });
             expect(res.statusCode).toEqual(201);
             testBidId = res.body.bidId;
         });
@@ -210,7 +210,7 @@ describe('AgriConnect API Endpoints', () => {
     // --- COLD STORAGE API TESTS ---
     describe('Cold Storage API', () => {
         it("should return a new cold storage (POST)", async() => {
-            const res = await request(app).post('/api/cold-storages').send({ cs_ownerId: "Dummy cs owner 123", name: "wisdom cold storage", available_capacity: 500, price_per_ton: 1500 });
+            const res = await request(app).post('/api/cold-storages/add').send({ cs_ownerId: "Dummy cs owner 123", name: "wisdom cold storage", available_capacity: 500, price_per_ton: 1500 });
             expect(res.statusCode).toEqual(201);
             testStorageId = res.body.storageId;
         });

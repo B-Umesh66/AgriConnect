@@ -5,7 +5,7 @@ const { client } = require('../db');
 const router = express.Router();
 
 // 1. POST: Register a new farmer
-router.post('/', async (req, res) => {
+router.post('/add', async (req, res) => {
     try {
         const results = await client.db("AgriDB").collection("farmers").insertOne(req.body);
         res.status(201).json({
