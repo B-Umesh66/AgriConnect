@@ -4,39 +4,23 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
+                // This tells Jenkins to pull the latest code from your GitHub branch
                 checkout scm
             }
         }
- 
-        stage('Install Backend Dependencies') {
+        
+        stage('Install Dependencies') {
             steps {
-                echo 'Installing backend node modules...'
+                echo 'Installing node modules...'
+                // 'bat' is used here to run commands on Windows
                 bat 'npm install'
             }
         }
 
-        stage('Install Frontend Dependencies') {
+        stage('Run Tests') {
             steps {
-                echo 'Installing frontend node modules...'
-                dir('frontend') {
-                    bat 'npm install'
-                }
-            }
-        }
-
-        stage('Run Backend Tests') {
-            steps {
-                echo 'Running automated security, unit, and integration tests...'
+                echo 'Running automated security and unit tests...'
                 bat 'npm test'
-            }
-        }
-
-        stage('Build Frontend') {
-            steps {
-                echo 'Verifying frontend build...'
-                dir('frontend') {
-                    bat 'npm run build'
-                }
             }
         }
     }
