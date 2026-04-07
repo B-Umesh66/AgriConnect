@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { jsPDF } from "jspdf"; 
 import '../Public/LandingPage.css'; 
 import './ColdStorageOwnerDashboard.css'; 
@@ -7,15 +8,73 @@ import './StorageRequests.css';
 
 const FarmerRequests = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  const [ownerData, setOwnerData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // --- UPDATED: Added 'from_date' to the mock data ---
-  const [requests, setRequests] = useState([
-    { _id: 'r1', farmer_name: 'Ramesh Kumar', crop: 'Potatoes', weight: 15, facility_name: 'AgriSafe Storage Main', price_per_ton: 1600, status: 'Pending', date: '2026-03-14', from_date: '2026-03-20' },
-    { _id: 'r2', farmer_name: 'Srinivas', crop: 'Apples', weight: 5, facility_name: 'AgriSafe Storage Main', price_per_ton: 1600, status: 'Approved', date: '2026-03-13', from_date: '2026-03-18' },
-    { _id: 'r3', farmer_name: 'Venkatesh', crop: 'Onions', weight: 40, facility_name: 'AgriSafe Storage North', price_per_ton: 1500, status: 'Declined', date: '2026-03-12', from_date: '2026-03-25' }
-  ]);
+  const [requests, setRequests] = useState([]);
 
-  const handleLogout = () => navigate('/login');
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const [ownerRes, bookingsRes, farmersRes, storagesRes] = await Promise.all([
+          axios.get(`/api/cs_owners/${userId}`),
+          axios.get('/api/bookings', { params: { cs_ownerId: userId } }),
+          axios.get('/api/farmers'),
+          axios.get('/api/cold-storages')
+        ]);
+
+        setOwnerData(ownerRes.data);
+
+        const farmersById = (farmersRes.data || []).reduce((acc, farmer) => {
+          acc[String(farmer._id)] = farmer;
+          return acc;
+        }, {});
+
+        const storagesById = (storagesRes.data || []).reduce((acc, storage) => {
+          acc[String(storage._id)] = storage;
+          return acc;
+        }, {});
+
+        const normalizedRequests = (bookingsRes.data || []).map((booking) => {
+          const farmer = farmersById[String(booking.farmerId)] || {};
+          const storage = storagesById[String(booking.facility_id)] || {};
+
+          return {
+            ...booking,
+            farmer_name: booking.farmer_name || farmer.name || 'Farmer',
+            facility_name: booking.facility_name || storage.name || 'Facility',
+            status: booking.status || 'Pending',
+            date: booking.date || '-',
+            from_date: booking.from_date || '-'
+          };
+        });
+
+        setRequests(normalizedRequests);
+      } catch (fetchError) {
+        console.error('Failed to fetch storage requests:', fetchError);
+        setError('Failed to load farmer requests. Please refresh and try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, navigate]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
 
   const downloadAcknowledgment = (req) => {
     const doc = new jsPDF();
@@ -79,18 +138,70 @@ const FarmerRequests = () => {
     doc.save(`Storage_Ack_${req.facility_name}_${req.farmer_name}.pdf`);
   };
 
-  const handleAction = (id, newStatus) => {
-    const updatedRequests = requests.map(req => 
-      req._id === id ? { ...req, status: newStatus } : req
-    );
-    setRequests(updatedRequests);
+  const deductCapacity = async (facilityId, weight) => {
+    try {
+      const storageRes = await axios.get(`/api/cold-storages/${facilityId}`);
+      const currentCapacity = storageRes.data.available_capacity || 0;
+      const newCapacity = currentCapacity - weight;
 
-    if (newStatus === 'Approved') {
-      const approvedReq = requests.find(r => r._id === id);
-      downloadAcknowledgment(approvedReq);
-      alert(`Space approved for ${approvedReq.farmer_name}! Your acknowledgment receipt is downloading.`);
+      if (newCapacity < 0) {
+        alert('Insufficient capacity available. Please check facility availability.');
+        return false;
+      }
+
+      await axios.put(`/api/cold-storages/${facilityId}`, { available_capacity: newCapacity });
+      return true;
+    } catch (deductError) {
+      console.error('Failed to deduct capacity:', deductError);
+      alert('Failed to update facility capacity. Please try again.');
+      return false;
     }
   };
+
+  const handleAction = async (id, newStatus) => {
+    const targetRequest = requests.find((request) => String(request._id) === String(id));
+    if (!targetRequest) return;
+
+    try {
+      // Handle capacity changes BEFORE updating booking status
+      if (newStatus === 'Approved') {
+        const capacityDeducted = await deductCapacity(targetRequest.facility_id, targetRequest.weight);
+        if (!capacityDeducted) {
+          return; // Don't proceed with approval if capacity deduction fails
+        }
+      }
+      // If declining, do NOT restore capacity (it was never reserved)
+
+      // Update booking status after capacity is handled
+      await axios.put(`/api/bookings/${id}`, { status: newStatus });
+
+      const updatedRequests = requests.map((request) =>
+        String(request._id) === String(id) ? { ...request, status: newStatus } : request
+      );
+      setRequests(updatedRequests);
+
+      if (newStatus === 'Approved') {
+        const approvedRequest = { ...targetRequest, status: 'Approved' };
+        downloadAcknowledgment(approvedRequest);
+        alert(`Space approved for ${approvedRequest.farmer_name}! Capacity deducted. Your acknowledgment receipt is downloading.`);
+      } else if (newStatus === 'Declined') {
+        alert(`Request from ${targetRequest.farmer_name} has been declined.`);
+      }
+    } catch (updateError) {
+      console.error('Failed to update booking status:', updateError);
+      alert('Failed to update request status. Please try again.');
+    }
+  };
+
+  if (loading) {
+    return <div style={{ padding: '50px', textAlign: 'center' }}>Loading booking requests...</div>;
+  }
+
+  if (error) {
+    return <div style={{ padding: '50px', textAlign: 'center', color: '#d32f2f' }}>{error}</div>;
+  }
+
+  const displayName = ownerData?.name || 'Owner';
 
   return (
     <div className="landing-container">
@@ -102,7 +213,7 @@ const FarmerRequests = () => {
           <Link to="/storage/requests" className="nav-link" style={{ color: '#2e7d32' }}>Farmer Requests</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn">Vikram Singh ▼</button>
+            <button className="profile-btn">{displayName} ▼</button>
             <div className="dropdown-content">
               <Link to="/storage/profile">My Owner Profile</Link>
               <Link to="/storage/overview">Business Overview</Link>

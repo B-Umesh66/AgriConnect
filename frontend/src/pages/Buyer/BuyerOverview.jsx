@@ -1,30 +1,86 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../Public/LandingPage.css'; 
 import './BuyerDashboard.css';     
-import './BuyerOverview.css'; // We will create this below
+import './BuyerOverview.css'; 
 
 const BuyerOverview = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  
+  const [userData, setUserData] = useState(null);
+  const [stats, setStats] = useState({ totalBidsPlaced: 0, pendingBids: 0, acceptedBids: 0, totalSpent: 0 });
+  const [recentPurchases, setRecentPurchases] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock aggregated data for the buyer
-  const stats = {
-    totalBidsPlaced: 15,
-    pendingBids: 3,
-    acceptedBids: 8,
-    totalSpent: 425000 // In Rupees
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const userRes = await axios.get(`/api/buyers/${userId}`);
+        setUserData(userRes.data);
+
+        // Fetch Bids, Crops, and Farmers to aggregate real data
+        const [bidsRes, cropsRes, farmersRes] = await Promise.all([
+          axios.get('/api/bids'),
+          axios.get('/api/crops'),
+          axios.get('/api/farmers')
+        ]);
+
+        // Filter only bids made by this buyer
+        const myBids = bidsRes.data.filter(bid => bid.buyerId === userId);
+        
+        // Match the crop and farmer names for the table
+        const populatedBids = myBids.map(bid => {
+          const crop = cropsRes.data.find(c => c._id === bid.cropId);
+          const farmer = crop ? farmersRes.data.find(f => f._id === crop.farmerId) : null;
+          return {
+            ...bid,
+            crop_name: crop?.crop_name || 'Unknown Crop',
+            quantity: crop?.quantity || 0,
+            farmer_name: farmer?.name || 'Unknown Farmer',
+            total_amount: (crop?.quantity || 0) * bid.bid_amount
+          };
+        });
+
+        // Calculate Real Stats
+        const paidBids = populatedBids.filter(b => b.status === 'Paid');
+        setStats({
+          totalBidsPlaced: populatedBids.length,
+          pendingBids: populatedBids.filter(b => b.status === 'Pending').length,
+          acceptedBids: populatedBids.filter(b => b.status === 'Accepted' || b.status === 'Paid').length,
+          totalSpent: paidBids.reduce((sum, bid) => sum + bid.total_amount, 0)
+        });
+
+        // Set table data to only show completed (Paid) purchases
+        setRecentPurchases(paidBids);
+
+      } catch (error) {
+        console.error("Failed to fetch overview data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, navigate]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
   };
 
-  const recentPurchases = [
-    { id: 1, crop: 'Onions', farmer: 'Srinivas', quantity: 200, amount: 620000, date: '2026-03-12' },
-    { id: 2, crop: 'Chilies', farmer: 'Venkat Rao', quantity: 50, amount: 150000, date: '2026-03-05' }
-  ];
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading overview...</div>;
 
-  const handleLogout = () => navigate('/login');
+  const businessName = userData?.business_name || userData?.name || 'Buyer';
 
   return (
     <div className="landing-container">
-      {/* --- Navbar --- */}
       <nav className="navbar">
         <div className="navbar-brand">
           <Link to="/buyer/dashboard" style={{ textDecoration: 'none' }}><h1>AgriConnect</h1></Link>
@@ -34,7 +90,7 @@ const BuyerOverview = () => {
           <Link to="/buyer/bids" className="nav-link">My Bids</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Suresh Traders ▼</button>
+            <button className="profile-btn" style={{ color: '#2e7d32', fontWeight: 'bold' }}>{businessName} ▼</button>
             <div className="dropdown-content">
               <Link to="/buyer/profile">My Profile</Link>
               <Link to="/buyer/overview" style={{ color: '#2e7d32', backgroundColor: '#f0f9f0' }}>Overview Dashboard</Link>
@@ -44,7 +100,6 @@ const BuyerOverview = () => {
         </div>
       </nav>
 
-      {/* --- Main Content --- */}
       <main className="overview-main">
         <div className="overview-container">
           <h2 className="overview-title">Procurement Overview</h2>
@@ -69,7 +124,7 @@ const BuyerOverview = () => {
             <div className="stat-card">
               <div className="stat-icon" style={{ backgroundColor: '#fce4ec' }}>₹</div>
               <h3>Total Spent</h3>
-              <p className="stat-number text-danger" style={{ fontSize: '2rem' }}>
+              <p className="stat-number text-danger" style={{ fontSize: '1.8rem' }}>
                 ₹{(stats.totalSpent / 100000).toFixed(2)}L
               </p>
             </div>
@@ -90,12 +145,12 @@ const BuyerOverview = () => {
                 </thead>
                 <tbody>
                   {recentPurchases.map(item => (
-                    <tr key={item.id}>
-                      <td>{item.date}</td>
-                      <td className="fw-bold">{item.crop}</td>
-                      <td>{item.farmer}</td>
+                    <tr key={item._id}>
+                      <td>{item.date || new Date().toISOString().split('T')[0]}</td>
+                      <td className="fw-bold">{item.crop_name}</td>
+                      <td>{item.farmer_name}</td>
                       <td>{item.quantity}</td>
-                      <td className="text-success fw-bold">₹{item.amount.toLocaleString('en-IN')}</td>
+                      <td className="text-success fw-bold">₹{item.total_amount.toLocaleString('en-IN')}</td>
                     </tr>
                   ))}
                 </tbody>

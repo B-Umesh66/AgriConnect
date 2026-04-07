@@ -1,49 +1,109 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { jsPDF } from "jspdf"; // --- NEW: Import jsPDF ---
+import axios from 'axios';
+import { jsPDF } from "jspdf"; 
 import '../Public/LandingPage.css'; 
 import './Dashboard.css';      
 import './FarmerBids.css'; 
 
 const BidsOffers = () => {
   const navigate = useNavigate();
+  const [userData, setUserData] = useState(null);
+  const [bids, setBids] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const userId = localStorage.getItem('userId');
 
-  // Mock data updated to include 'quantity' and a 'Paid' status for testing
-  const [bids, setBids] = useState([
-    { _id: '1', crop_name: 'Tomatoes', buyer_name: 'Ravi Kumar', quantity: 10, bid_amount: 2600, status: 'Pending', date: '2026-03-14' },
-    { _id: '2', crop_name: 'Potatoes', buyer_name: 'Suresh Traders', quantity: 20, bid_amount: 1450, status: 'Paid', date: '2026-03-12' },
-    { _id: '3', crop_name: 'Onions', buyer_name: 'Kisan Fresh', quantity: 15, bid_amount: 1866, status: 'Rejected', date: '2026-03-10' }
-  ]);
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        // 1. Fetch User Data
+        const userRes = await axios.get(`/api/farmers/${userId}`);
+        setUserData(userRes.data);
+
+        // 2. Fetch Crops, Bids, AND Buyers from the database at the same time
+        const [cropsRes, bidsRes, buyersRes] = await Promise.all([
+          axios.get('/api/crops'),
+          axios.get('/api/bids'),
+          axios.get('/api/buyers') // Fetching buyers to get their Business Names
+        ]);
+
+        const myCrops = cropsRes.data.filter(c => c.farmerId === userId);
+        const myCropIds = myCrops.map(c => c._id);
+        const allBuyers = buyersRes.data;
+
+        // 3. Map crop names and buyer names to the bids
+        const myBids = bidsRes.data
+          .filter(bid => myCropIds.includes(bid.cropId))
+          .map(bid => {
+             const matchedCrop = myCrops.find(c => c._id === bid.cropId);
+             
+             // MATCH THE BUYER: Find the buyer whose ID matches the bid's buyerId
+             const matchedBuyer = allBuyers.find(b => b._id === bid.buyerId);
+             
+             return {
+               ...bid,
+               crop_name: matchedCrop ? matchedCrop.crop_name : 'Unknown Crop',
+               quantity: matchedCrop ? matchedCrop.quantity : 0,
+               
+               // DYNAMIC BUYER NAME: Use business_name, fallback to name, fallback to 'Unknown Buyer'
+               buyer_name: matchedBuyer ? (matchedBuyer.business_name || matchedBuyer.name) : 'Unknown Buyer', 
+               
+               status: bid.status || 'Pending',
+               date: bid.date || new Date().toISOString().split('T')[0]
+             };
+          });
+
+        setBids(myBids);
+      } catch (error) {
+        console.error("Error fetching bids:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, navigate]);
 
   const handleLogout = () => {
+    localStorage.clear();
     navigate('/login');
   };
 
-  const handleAccept = (id) => {
-    const updatedBids = bids.map(bid => 
-      bid._id === id ? { ...bid, status: 'Accepted' } : bid
-    );
-    setBids(updatedBids);
-    alert("Offer accepted! Waiting for the buyer to complete payment.");
+  // --- ENSURED FIX: Now receives cropId and updates the Crop database ---
+  const handleStatusUpdate = async (id, newStatus, cropId) => {
+    try {
+      // Update the Bid's status
+      await axios.put(`/api/bids/${id}`, { status: newStatus });
+      
+      // Update the Crop's status to 'Sold' so it disappears from Marketplace
+      if (newStatus === 'Accepted' && cropId) {
+        await axios.put(`/api/crops/${cropId}`, { status: 'Sold' });
+        alert("Offer accepted! The crop has been marked as Sold and removed from the marketplace. Waiting for the buyer to complete payment.");
+      } else if (newStatus === 'Rejected') {
+        alert("Offer rejected.");
+      }
+
+      // Update the local UI state
+      setBids(bids.map(bid => bid._id === id ? { ...bid, status: newStatus } : bid));
+      
+    } catch (error) {
+      console.error(`Failed to mark bid as ${newStatus}:`, error);
+      alert("Failed to update status.");
+    }
   };
 
-  const handleReject = (id) => {
-    const updatedBids = bids.map(bid => 
-      bid._id === id ? { ...bid, status: 'Rejected' } : bid
-    );
-    setBids(updatedBids);
-  };
-
-  // --- NEW: PDF Generation Function for Farmer ---
   const downloadReceipt = (bid) => {
     const doc = new jsPDF();
     const totalAmount = bid.quantity * bid.bid_amount;
     
-    // Header
     doc.setFontSize(24);
     doc.setTextColor(46, 125, 50); 
     doc.text("AgriConnect", 105, 20, null, null, "center");
-    
     doc.setFontSize(14);
     doc.setTextColor(100, 100, 100);
     doc.text("Payment Receipt (Seller Copy)", 105, 30, null, null, "center");
@@ -52,15 +112,13 @@ const BidsOffers = () => {
     doc.setDrawColor(200, 200, 200);
     doc.line(20, 35, 190, 35);
     
-    // Details
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
     doc.text(`Receipt ID: TXN-${Math.floor(Math.random() * 1000000)}`, 20, 50);
     doc.text(`Date of Issue: ${new Date().toLocaleDateString()}`, 20, 58);
     doc.text(`Received From: ${bid.buyer_name} (Buyer)`, 20, 66);
-    doc.text(`Paid To: Ramesh (Farmer)`, 20, 74); 
+    doc.text(`Paid To: ${userData?.name || 'Farmer'}`, 20, 74); 
     
-    // Table Header
     doc.setFillColor(232, 245, 233); 
     doc.rect(20, 85, 170, 10, 'F');
     doc.setFont("helvetica", "bold");
@@ -69,14 +127,12 @@ const BidsOffers = () => {
     doc.text("Rate", 130, 92);
     doc.text("Amount", 160, 92);
     
-    // Table Content
     doc.setFont("helvetica", "normal");
     doc.text(`${bid.crop_name}`, 25, 105);
     doc.text(`${bid.quantity} Qtl`, 100, 105);
     doc.text(`Rs. ${bid.bid_amount}`, 130, 105);
     doc.text(`Rs. ${totalAmount.toLocaleString('en-IN')}`, 160, 105);
     
-    // Total
     doc.setLineWidth(0.5);
     doc.line(20, 115, 190, 115);
     doc.setFont("helvetica", "bold");
@@ -93,14 +149,15 @@ const BidsOffers = () => {
     doc.save(`AgriConnect_Seller_Receipt_${bid.crop_name}.pdf`);
   };
 
+  const firstName = userData?.name ? userData.name.split(' ')[0] : 'Farmer';
+
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading incoming bids...</div>;
+
   return (
     <div className="landing-container">
-      {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-brand">
-          <Link to="/farmer/dashboard" style={{ textDecoration: 'none' }}>
-            <h1>AgriConnect</h1>
-          </Link>
+          <Link to="/farmer/dashboard" style={{ textDecoration: 'none' }}><h1>AgriConnect</h1></Link>
         </div>
         <div className="navbar-links">
           <Link to="/farmer/crops" className="nav-link">My Crops</Link>
@@ -108,7 +165,7 @@ const BidsOffers = () => {
           <Link to="/farmer/storage" className="nav-link">Cold Storages</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn">Ramesh ▼</button>
+            <button className="profile-btn">{firstName} ▼</button>
             <div className="dropdown-content">
               <Link to="/farmer/profile">My Profile</Link>
               <Link to="/farmer/overview">Overview Dashboard</Link>
@@ -118,7 +175,6 @@ const BidsOffers = () => {
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <main className="bids-main">
         <div className="bids-container">
           <div className="bids-header">
@@ -136,47 +192,29 @@ const BidsOffers = () => {
                   </div>
                   
                   <div className="bid-card-body">
-                    <div className="bid-detail">
-                      <span className="detail-label">Buyer:</span>
-                      <span className="detail-value">{bid.buyer_name}</span>
-                    </div>
-                    <div className="bid-detail">
-                      <span className="detail-label">Quantity:</span>
-                      <span className="detail-value">{bid.quantity} Qtl</span>
-                    </div>
-                    <div className="bid-detail">
-                      <span className="detail-label">Date:</span>
-                      <span className="detail-value">{bid.date}</span>
-                    </div>
-                    <div className="bid-detail amount">
-                      <span className="detail-label">Offer Rate:</span>
-                      <span className="detail-value price">₹{bid.bid_amount} / Qtl</span>
-                    </div>
+                    <div className="bid-detail"><span className="detail-label">Buyer:</span><span className="detail-value" style={{fontWeight: 'bold', color: '#1565c0'}}>{bid.buyer_name}</span></div>
+                    <div className="bid-detail"><span className="detail-label">Quantity:</span><span className="detail-value">{bid.quantity} Qtl</span></div>
+                    <div className="bid-detail"><span className="detail-label">Date:</span><span className="detail-value">{bid.date}</span></div>
+                    <div className="bid-detail amount"><span className="detail-label">Offer Rate:</span><span className="detail-value price">₹{bid.bid_amount} / Qtl</span></div>
                   </div>
 
-                  {/* Actions for Pending Bids */}
                   {bid.status === 'Pending' && (
                     <div className="bid-card-actions">
-                      <button className="btn-accept" onClick={() => handleAccept(bid._id)}>Accept Offer</button>
-                      <button className="btn-reject" onClick={() => handleReject(bid._id)}>Reject</button>
+                      {/* PASSED bid.cropId TO THE FUNCTION */}
+                      <button className="btn-accept" onClick={() => handleStatusUpdate(bid._id, 'Accepted', bid.cropId)}>Accept Offer</button>
+                      <button className="btn-reject" onClick={() => handleStatusUpdate(bid._id, 'Rejected', bid.cropId)}>Reject</button>
                     </div>
                   )}
 
-                  {/* Message for Accepted (Waiting on payment) */}
                   {bid.status === 'Accepted' && (
                     <div style={{ textAlign: 'center', padding: '0.8rem', backgroundColor: '#f5f5f5', color: '#666', borderRadius: '4px', fontSize: '0.9rem', fontWeight: 'bold' }}>
                       ⏳ Waiting for Buyer Payment
                     </div>
                   )}
 
-                  {/* --- NEW: Download Receipt for Paid Bids --- */}
                   {bid.status === 'Paid' && (
                     <div className="bid-card-actions">
-                      <button 
-                        className="btn-secondary" 
-                        style={{ width: '100%', borderColor: '#1565c0', color: '#1565c0' }} 
-                        onClick={() => downloadReceipt(bid)}
-                      >
+                      <button className="btn-secondary" style={{ width: '100%', borderColor: '#1565c0', color: '#1565c0' }} onClick={() => downloadReceipt(bid)}>
                         📄 Download Seller Receipt
                       </button>
                     </div>
@@ -184,15 +222,12 @@ const BidsOffers = () => {
                 </div>
               ))
             ) : (
-              <div className="no-bids">
-                <p>You have no incoming bids right now.</p>
-              </div>
+              <div className="no-bids"><p>You have no incoming bids right now.</p></div>
             )}
           </div>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="footer" style={{ marginTop: 'auto' }}>
         <p>&copy; {new Date().getFullYear()} AgriConnect. All rights reserved.</p>
       </footer>

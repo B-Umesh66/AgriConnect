@@ -1,34 +1,85 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../Public/LandingPage.css'; 
 import './ColdStorageOwnerDashboard.css';     
-import './ColdStorageOwnerOverview.css'; // We will create this below
+import './ColdStorageOwnerOverview.css'; 
 
 const ColdStorageOverview = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  
+  const [userData, setUserData] = useState(null);
+  const [stats, setStats] = useState({ totalCapacity: 0, utilizedCapacity: 0, pendingRequests: 0, monthlyRevenue: 0 });
+  const [activeAllocations, setActiveAllocations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock aggregated data for the storage owner
-  const stats = {
-    totalCapacity: 1500, // Across all facilities
-    utilizedCapacity: 1250,
-    pendingRequests: 4,
-    monthlyRevenue: 1875000 // In Rupees
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const userRes = await axios.get(`/api/cs_owners/${userId}`);
+        setUserData(userRes.data);
+
+        // Fetch facilities to calculate total capacity
+        const storageRes = await axios.get('/api/cold-storages');
+        const myFacilities = storageRes.data.filter(s => s.cs_ownerId === userId);
+
+        let totalCap = 0;
+        myFacilities.forEach(facility => {
+            totalCap += Number(facility.total_capacity || 0);
+        });
+
+        // Fetch real bookings from the database
+        const bookingsRes = await axios.get(`/api/bookings?cs_ownerId=${userId}`);
+        const allBookings = bookingsRes.data;
+
+        // Calculate Real Stats
+        const approvedBookings = allBookings.filter(b => b.status === 'Approved');
+        
+        let utilized = 0;
+        let revenue = 0;
+        
+        approvedBookings.forEach(booking => {
+          utilized += Number(booking.weight);
+          revenue += (Number(booking.weight) * Number(booking.price_per_ton));
+        });
+
+        setStats({
+          totalCapacity: totalCap,
+          utilizedCapacity: utilized,
+          pendingRequests: allBookings.filter(b => b.status === 'Pending').length,
+          monthlyRevenue: revenue
+        });
+
+        setActiveAllocations(approvedBookings);
+
+      } catch (error) {
+        console.error("Failed to fetch overview data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, navigate]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
   };
 
-  const activeAllocations = [
-    { id: 1, facility: 'AgriSafe Storage Main', farmer: 'Ramesh Kumar', crop: 'Tomatoes', weight: 50, validUntil: '2026-04-14' },
-    { id: 2, facility: 'AgriSafe Storage North', farmer: 'Srinivas', crop: 'Apples', weight: 200, validUntil: '2026-05-01' },
-    { id: 3, facility: 'AgriSafe Storage Main', farmer: 'Venkatesh', crop: 'Potatoes', weight: 100, validUntil: '2026-06-15' }
-  ];
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading overview...</div>;
 
-  const handleLogout = () => navigate('/login');
-
-  // Calculate percentage for a progress bar
-  const utilizationPercentage = Math.round((stats.utilizedCapacity / stats.totalCapacity) * 100);
+  const displayName = userData?.name || 'Owner';
+  const utilizationPercentage = stats.totalCapacity > 0 ? Math.round((stats.utilizedCapacity / stats.totalCapacity) * 100) : 0;
 
   return (
     <div className="landing-container">
-      {/* --- Navbar --- */}
       <nav className="navbar">
         <div className="navbar-brand">
           <Link to="/storage/dashboard" style={{ textDecoration: 'none' }}><h1>AgriConnect</h1></Link>
@@ -38,7 +89,7 @@ const ColdStorageOverview = () => {
           <Link to="/storage/requests" className="nav-link">Farmer Requests</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn" style={{ color: '#1e88e5', fontWeight: 'bold' }}>Vikram Singh ▼</button>
+            <button className="profile-btn" style={{ color: '#1e88e5', fontWeight: 'bold' }}>{displayName} ▼</button>
             <div className="dropdown-content">
               <Link to="/storage/profile">My Owner Profile</Link>
               <Link to="/storage/overview" style={{ color: '#1e88e5', backgroundColor: '#e3f2fd' }}>Business Overview</Link>
@@ -48,7 +99,6 @@ const ColdStorageOverview = () => {
         </div>
       </nav>
 
-      {/* --- Main Content --- */}
       <main className="overview-main">
         <div className="overview-container">
           <h2 className="overview-title">Business Operations Overview</h2>
@@ -65,7 +115,6 @@ const ColdStorageOverview = () => {
               <h3>Space Utilized</h3>
               <p className="stat-number text-primary">{stats.utilizedCapacity} <span style={{ fontSize: '1rem', color: '#666' }}>Tons</span></p>
               
-              {/* Utilization Progress Bar */}
               <div className="progress-container">
                 <div className="progress-bar" style={{ width: `${utilizationPercentage}%`, backgroundColor: utilizationPercentage > 85 ? '#d32f2f' : '#1e88e5' }}></div>
               </div>
@@ -95,17 +144,17 @@ const ColdStorageOverview = () => {
                     <th>Farmer Name</th>
                     <th>Crop Stored</th>
                     <th>Weight (Tons)</th>
-                    <th>Valid Until</th>
+                    <th>Start Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeAllocations.map(item => (
-                    <tr key={item.id}>
-                      <td className="fw-bold text-primary">{item.facility}</td>
-                      <td>{item.farmer}</td>
+                    <tr key={item._id}>
+                      <td className="fw-bold text-primary">{item.facility_name}</td>
+                      <td>{item.farmer_name}</td>
                       <td>{item.crop}</td>
                       <td className="fw-bold">{item.weight}</td>
-                      <td style={{ color: '#666' }}>{item.validUntil}</td>
+                      <td style={{ color: '#666' }}>{item.from_date}</td>
                     </tr>
                   ))}
                 </tbody>

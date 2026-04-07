@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../Public/LandingPage.css'; 
 import './ColdStorageOwnerDashboard.css'; 
 import './StorageFacilities.css'; 
 
 const MyFacilities = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Mock data for the owner's storage units
-  const [facilities, setFacilities] = useState([
-    { _id: 'f1', name: 'AgriSafe Storage Main', location: 'Visakhapatnam, AP', total_capacity: 1000, available_capacity: 250, price_per_ton: 1600 },
-    { _id: 'f2', name: 'AgriSafe Storage North', location: 'Vizianagaram, AP', total_capacity: 500, available_capacity: 0, price_per_ton: 1500 }
-  ]);
+  const [facilities, setFacilities] = useState([]);
 
   // --- UPDATED: States for Edit Modal ---
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -30,7 +31,43 @@ const MyFacilities = () => {
     price_per_ton: ''
   });
 
-  const handleLogout = () => navigate('/login');
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        const [ownerResponse, facilitiesResponse] = await Promise.all([
+          axios.get(`/api/cs_owners/${userId}`),
+          axios.get('/api/cold-storages')
+        ]);
+
+        setUserData(ownerResponse.data);
+
+        const ownerFacilities = (facilitiesResponse.data || []).filter(
+          (facility) => String(facility.cs_ownerId) === String(userId)
+        );
+        setFacilities(ownerFacilities);
+      } catch (fetchError) {
+        console.error('Failed to fetch facilities data:', fetchError);
+        setError('Failed to load your facilities. Please refresh and try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, navigate]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
 
   // --- UPDATED: Edit Functions ---
   const openEditModal = (facility) => {
@@ -52,23 +89,33 @@ const MyFacilities = () => {
     setEditValue(type === 'capacity' ? selectedFacility.available_capacity : selectedFacility.price_per_ton);
   };
 
-  const handleUpdateSubmit = (e) => {
+  const handleUpdateSubmit = async (e) => {
     e.preventDefault();
-    
-    const updatedFacilities = facilities.map(fac => {
-      if (fac._id === selectedFacility._id) {
-        if (editType === 'capacity') {
-          return { ...fac, available_capacity: Number(editValue) };
-        } else if (editType === 'price') {
-          return { ...fac, price_per_ton: Number(editValue) };
-        }
-      }
-      return fac;
-    });
 
-    setFacilities(updatedFacilities);
-    alert(`Successfully updated the ${editType} for ${selectedFacility.name}!`);
-    closeEditModal();
+    try {
+      const payload = {};
+      if (editType === 'capacity') {
+        payload.available_capacity = Number(editValue);
+      } else if (editType === 'price') {
+        payload.price_per_ton = Number(editValue);
+      }
+
+      await axios.put(`/api/cold-storages/${selectedFacility._id}`, payload);
+
+      const updatedFacilities = facilities.map(fac => {
+        if (fac._id === selectedFacility._id) {
+          return { ...fac, ...payload };
+        }
+        return fac;
+      });
+
+      setFacilities(updatedFacilities);
+      alert(`Successfully updated the ${editType} for ${selectedFacility.name}!`);
+      closeEditModal();
+    } catch (updateError) {
+      console.error('Failed to update facility:', updateError);
+      alert('Failed to update facility. Please try again.');
+    }
   };
 
   // --- Add Facility Functions ---
@@ -84,21 +131,40 @@ const MyFacilities = () => {
     setNewFacilityData({ ...newFacilityData, [name]: value });
   };
 
-  const handleAddSubmit = (e) => {
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
-    const newFacility = {
-      _id: 'f' + Date.now(), 
-      name: newFacilityData.name,
-      location: newFacilityData.location,
-      total_capacity: Number(newFacilityData.total_capacity),
-      available_capacity: Number(newFacilityData.total_capacity), 
-      price_per_ton: Number(newFacilityData.price_per_ton)
-    };
 
-    setFacilities([...facilities, newFacility]);
-    alert(`Successfully added ${newFacility.name} to your portfolio!`);
-    closeAddModal();
+    try {
+      const payload = {
+        cs_ownerId: userId,
+        name: newFacilityData.name,
+        location: newFacilityData.location,
+        total_capacity: Number(newFacilityData.total_capacity),
+        available_capacity: Number(newFacilityData.total_capacity),
+        price_per_ton: Number(newFacilityData.price_per_ton)
+      };
+
+      const response = await axios.post('/api/cold-storages/add', payload);
+      const createdFacility = { ...payload, _id: response.data.storageId };
+
+      setFacilities([...facilities, createdFacility]);
+      alert(`Successfully added ${createdFacility.name} to your portfolio!`);
+      closeAddModal();
+    } catch (addError) {
+      console.error('Failed to add facility:', addError);
+      alert('Failed to add facility. Please try again.');
+    }
   };
+
+  if (loading) {
+    return <div style={{ padding: '50px', textAlign: 'center' }}>Loading your facilities...</div>;
+  }
+
+  if (error) {
+    return <div style={{ padding: '50px', textAlign: 'center', color: '#d32f2f' }}>{error}</div>;
+  }
+
+  const displayName = userData?.name || 'Owner';
 
   return (
     <div className="landing-container">
@@ -110,7 +176,7 @@ const MyFacilities = () => {
           <Link to="/storage/requests" className="nav-link">Farmer Requests</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn">Vikram Singh ▼</button>
+            <button className="profile-btn">{displayName} ▼</button>
             <div className="dropdown-content">
               <Link to="/storage/profile">My Owner Profile</Link>
               <Link to="/storage/overview">Business Overview</Link>
@@ -132,7 +198,7 @@ const MyFacilities = () => {
           </div>
 
           <div className="facility-grid">
-            {facilities.map((facility) => (
+            {facilities.length > 0 ? facilities.map((facility) => (
               <div key={facility._id} className="facility-card">
                 <div className="facility-card-header">
                   <div className="facility-icon">🏢</div>
@@ -166,7 +232,11 @@ const MyFacilities = () => {
                   </button>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="no-facilities">
+                <p>You have not added any facilities yet. Click Add New Facility to get started.</p>
+              </div>
+            )}
           </div>
         </div>
       </main>

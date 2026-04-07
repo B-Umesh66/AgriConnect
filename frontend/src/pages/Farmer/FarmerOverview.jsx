@@ -1,30 +1,74 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import '../Public/LandingPage.css'; 
 import './Dashboard.css';     
-import './FarmerOverview.css'; // We will create this below
+import './FarmerOverview.css'; 
 
 const FarmerOverview = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  
+  const [userData, setUserData] = useState(null);
+  const [stats, setStats] = useState({ totalListed: 0, acceptedBids: 0, rejectedBids: 0, inStorageCount: 0 });
+  const [storageDetails, setStorageDetails] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock aggregated data
-  const stats = {
-    totalListed: 8,
-    acceptedBids: 3,
-    rejectedBids: 1,
-    inStorageCount: 2
+  useEffect(() => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const userRes = await axios.get(`/api/farmers/${userId}`);
+        setUserData(userRes.data);
+
+        // Fetch Data from DB
+        const [cropsRes, bidsRes, bookingsRes] = await Promise.all([
+          axios.get('/api/crops'),
+          axios.get('/api/bids'),
+          axios.get(`/api/bookings?farmerId=${userId}`)
+        ]);
+
+        // Calculate Real Stats
+        const myCrops = cropsRes.data.filter(c => c.farmerId === userId);
+        const myCropIds = myCrops.map(c => c._id);
+        
+        const myIncomingBids = bidsRes.data.filter(bid => myCropIds.includes(bid.cropId));
+        const approvedBookings = bookingsRes.data.filter(b => b.status === 'Approved');
+
+        setStats({
+          totalListed: myCrops.length,
+          acceptedBids: myIncomingBids.filter(b => b.status === 'Accepted' || b.status === 'Paid').length,
+          rejectedBids: myIncomingBids.filter(b => b.status === 'Rejected').length,
+          inStorageCount: approvedBookings.length
+        });
+
+        setStorageDetails(approvedBookings);
+
+      } catch (error) {
+        console.error("Failed to fetch overview data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [userId, navigate]);
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
   };
 
-  const storageDetails = [
-    { id: 1, crop: 'Potatoes', quantity: 50, location: 'Wisdom Cold Storage' },
-    { id: 2, crop: 'Apples', quantity: 20, location: 'Kisan Fresh Vault' }
-  ];
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading overview...</div>;
 
-  const handleLogout = () => navigate('/login');
+  const firstName = userData?.name ? userData.name.split(' ')[0] : 'Farmer';
 
   return (
     <div className="landing-container">
-      {/* --- Navbar --- */}
       <nav className="navbar">
         <div className="navbar-brand">
           <Link to="/farmer/dashboard" style={{ textDecoration: 'none' }}><h1>AgriConnect</h1></Link>
@@ -35,7 +79,7 @@ const FarmerOverview = () => {
           <Link to="/farmer/storage" className="nav-link">Cold Storages</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn" style={{ color: '#2e7d32', fontWeight: 'bold' }}>Ramesh ▼</button>
+            <button className="profile-btn" style={{ color: '#2e7d32', fontWeight: 'bold' }}>{firstName} ▼</button>
             <div className="dropdown-content">
               <Link to="/farmer/profile">My Profile</Link>
               <Link to="/farmer/overview" style={{ color: '#2e7d32', backgroundColor: '#f0f9f0' }}>Overview Dashboard</Link>
@@ -45,7 +89,6 @@ const FarmerOverview = () => {
         </div>
       </nav>
 
-      {/* --- Main Content --- */}
       <main className="overview-main">
         <div className="overview-container">
           <h2 className="overview-title">Business Overview</h2>
@@ -87,10 +130,10 @@ const FarmerOverview = () => {
                 </thead>
                 <tbody>
                   {storageDetails.map(item => (
-                    <tr key={item.id}>
+                    <tr key={item._id}>
                       <td className="fw-bold">{item.crop}</td>
-                      <td>{item.quantity}</td>
-                      <td>{item.location}</td>
+                      <td>{item.weight}</td>
+                      <td>{item.facility_name}</td>
                     </tr>
                   ))}
                 </tbody>
