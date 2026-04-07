@@ -52,7 +52,7 @@ const LandingPage = () => {
   const getDashboardRoute = () => {
     if (userRole === 'Farmer') return '/farmer/dashboard';
     if (userRole === 'Buyer') return '/buyer/dashboard';
-    if (userRole === 'Cold Storage Owner') return '/cs-owner/dashboard';
+    if (userRole === 'Cold Storage Owner') return '/storage/dashboard';
     return '/login';
   };
 

@@ -93,14 +93,6 @@ const FarmerStorage = () => {
       // 3. Update the local UI immediately
       setMyBookings([...myBookings, { ...bookingPayload, _id: res.data.bookingId }]);
 
-      // 4. Update the Cold Storage Capacity dynamically in the Database
-      const newCapacity = selectedStorage.available_capacity - bookedWeight;
-      await axios.put(`/api/cold-storages/${selectedStorage._id}`, { available_capacity: newCapacity });
-
-      setStorages(storages.map(s => 
-        s._id === selectedStorage._id ? { ...s, available_capacity: newCapacity } : s
-      ));
-
       setIsModalOpen(false);
       alert(`Request sent! You can track your booking status in the table below.`);
     } catch (error) {

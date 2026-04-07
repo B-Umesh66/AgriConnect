@@ -43,7 +43,7 @@ const Login = () => {
       } else if (response.data.role === 'Buyer') {
         navigate('/buyer/dashboard');
       } else if (response.data.role === 'Cold Storage Owner') {
-        navigate('/cs-owner/dashboard');
+        navigate('/storage/dashboard');
       } else {
         navigate('/');
       }
