@@ -9,9 +9,11 @@ const formatAgmarknetString = (str) => {
     return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
-router.get('/prices', async (req, res) => {
+const fetchMarketPrices = async (req, res) => {
     try {
-        const { commodity, state, district } = req.query;
+        // Support both GET (query params) and POST (JSON body) clients.
+        const input = req.method === 'POST' ? req.body : req.query;
+        const { commodity, state, district } = input;
         const apiUrl = 'https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070'; 
         
         // Generate Today's Date
@@ -57,6 +59,9 @@ router.get('/prices', async (req, res) => {
             message: "Failed to fetch market prices from Agmarknet." 
         });
     }
-});
+};
+
+router.get('/prices', fetchMarketPrices);
+router.post('/prices', fetchMarketPrices);
 
 module.exports = router;
