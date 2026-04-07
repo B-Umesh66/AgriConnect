@@ -50,13 +50,25 @@ const fetchMarketPrices = async (req, res) => {
             records: response.data.records
         });
 
+    return {
+        success: true,
+        date_fetched: currentDate,
+        records: response.data.records
+    };
+};
+
+const handleMarketPricesRequest = async (req, res) => {
+    try {
+        const params = req.method === 'POST' ? req.body : req.query;
+        const result = await fetchMarketPrices(params);
+        return res.status(200).json(result);
     } catch (error) {
         const apiError = error.response ? error.response.data : error.message;
         console.error("AGMARKNET REJECTION DETAILS:", apiError);
 
-        res.status(500).json({ 
-            success: false, 
-            message: "Failed to fetch market prices from Agmarknet." 
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch market prices from Agmarknet."
         });
     }
 };
