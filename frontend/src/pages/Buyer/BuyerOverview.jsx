@@ -25,16 +25,17 @@ const BuyerOverview = () => {
         const userRes = await axios.get(`/api/buyers/${userId}`);
         setUserData(userRes.data);
 
-        // Fetch Bids, Crops, and Farmers to aggregate data
+        // Fetch Bids, Crops, and Farmers to aggregate real data
         const [bidsRes, cropsRes, farmersRes] = await Promise.all([
           axios.get('/api/bids'),
           axios.get('/api/crops'),
           axios.get('/api/farmers')
         ]);
 
+        // Filter only bids made by this buyer
         const myBids = bidsRes.data.filter(bid => bid.buyerId === userId);
         
-        // Map full data to bids
+        // Match the crop and farmer names for the table
         const populatedBids = myBids.map(bid => {
           const crop = cropsRes.data.find(c => c._id === bid.cropId);
           const farmer = crop ? farmersRes.data.find(f => f._id === crop.farmerId) : null;
@@ -47,15 +48,16 @@ const BuyerOverview = () => {
           };
         });
 
-        // Calculate Stats
+        // Calculate Real Stats
         const paidBids = populatedBids.filter(b => b.status === 'Paid');
         setStats({
           totalBidsPlaced: populatedBids.length,
           pendingBids: populatedBids.filter(b => b.status === 'Pending').length,
-          acceptedBids: populatedBids.filter(b => b.status === 'Accepted').length,
+          acceptedBids: populatedBids.filter(b => b.status === 'Accepted' || b.status === 'Paid').length,
           totalSpent: paidBids.reduce((sum, bid) => sum + bid.total_amount, 0)
         });
 
+        // Set table data to only show completed (Paid) purchases
         setRecentPurchases(paidBids);
 
       } catch (error) {
@@ -88,7 +90,7 @@ const BuyerOverview = () => {
           <Link to="/buyer/bids" className="nav-link">My Bids</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn">{businessName} ▼</button>
+            <button className="profile-btn" style={{ color: '#2e7d32', fontWeight: 'bold' }}>{businessName} ▼</button>
             <div className="dropdown-content">
               <Link to="/buyer/profile">My Profile</Link>
               <Link to="/buyer/overview" style={{ color: '#2e7d32', backgroundColor: '#f0f9f0' }}>Overview Dashboard</Link>
@@ -101,28 +103,28 @@ const BuyerOverview = () => {
       <main className="overview-main">
         <div className="overview-container">
           <h2 className="overview-title">Procurement Overview</h2>
-          <p className="overview-subtitle">Track your bidding performance and total expenditures.</p>
+          <p className="overview-subtitle">Track your sourcing metrics and total expenditure.</p>
 
           <div className="stats-grid">
             <div className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#e3f2fd' }}>📊</div>
-              <h3>Total Bids Placed</h3>
+              <div className="stat-icon" style={{ backgroundColor: '#e3f2fd' }}>📤</div>
+              <h3>Total Offers Made</h3>
               <p className="stat-number text-primary">{stats.totalBidsPlaced}</p>
             </div>
             <div className="stat-card">
               <div className="stat-icon" style={{ backgroundColor: '#fff3e0' }}>⏳</div>
-              <h3>Pending Bids</h3>
-              <p className="stat-number" style={{ color: '#f57c00' }}>{stats.pendingBids}</p>
+              <h3>Pending Offers</h3>
+              <p className="stat-number text-warning" style={{ color: '#f57c00' }}>{stats.pendingBids}</p>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#e8f5e9' }}>✅</div>
-              <h3>Accepted Offers</h3>
+              <div className="stat-icon" style={{ backgroundColor: '#e8f5e9' }}>🤝</div>
+              <h3>Deals Closed</h3>
               <p className="stat-number text-success">{stats.acceptedBids}</p>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#f3e5f5' }}>💰</div>
+              <div className="stat-icon" style={{ backgroundColor: '#fce4ec' }}>₹</div>
               <h3>Total Spent</h3>
-              <p className="stat-number text-purple">
+              <p className="stat-number text-danger" style={{ fontSize: '1.8rem' }}>
                 ₹{(stats.totalSpent / 100000).toFixed(2)}L
               </p>
             </div>

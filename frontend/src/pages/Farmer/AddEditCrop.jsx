@@ -28,11 +28,9 @@ const AddEditCrop = () => {
 
     const fetchData = async () => {
       try {
-        // Get user for Navbar
         const userRes = await axios.get(`/api/farmers/${userId}`);
         setUserData(userRes.data);
 
-        // If editing, get the crop data
         if (isEditMode) {
           const cropRes = await axios.get(`/api/crops/${id}`);
           setFormData({
@@ -59,16 +57,18 @@ const AddEditCrop = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Create the payload and attach the real logged-in farmer's ID
     const payload = {
-      farmerId: userId, // Dynamically use the logged-in farmer's ID
+      farmerId: userId, 
       crop_name: formData.crop_name,
       quantity: Number(formData.quantity),
       expected_price: Number(formData.expected_price),
       listed_date: formData.listed_date,
-      status: 'Listed'
+      status: 'Listed' 
     };
 
     try {
+      // Actually save it to the MongoDB database!
       if (isEditMode) {
         await axios.put(`/api/crops/${id}`, payload);
       } else {
@@ -77,7 +77,7 @@ const AddEditCrop = () => {
       navigate('/farmer/crops');
     } catch (error) {
       console.error("Failed to save crop:", error);
-      alert("Failed to save crop data. Please try again.");
+      alert("Failed to list crop. Please try again.");
     }
   };
 

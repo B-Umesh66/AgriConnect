@@ -10,22 +10,18 @@ const BuyerMarketplace = () => {
   const userId = localStorage.getItem('userId');
   const [userData, setUserData] = useState(null);
 
-  // --- State for Farmer Listings (Database) ---
   const [crops, setCrops] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingCrops, setLoadingCrops] = useState(true);
 
-  // --- State for Agmarknet API (Real-time Prices) ---
-  const [marketSearch, setMarketSearch] = useState({ commodity: 'Tomato', state: 'Andhra Pradesh', district: 'Chittoor' });
+  const [marketSearch, setMarketSearch] = useState({ commodity: '', state: '', district: '' });
   const [marketPrices, setMarketPrices] = useState([]);
   const [marketLoading, setMarketLoading] = useState(false);
 
-  // --- Modal & Bidding State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCrop, setSelectedCrop] = useState(null);
   const [bidAmount, setBidAmount] = useState('');
 
-  // 1. Initial Data Fetch (User Info & Farmer Crops)
   useEffect(() => {
     if (!userId) {
       navigate('/login');
@@ -37,28 +33,41 @@ const BuyerMarketplace = () => {
         const userRes = await axios.get(`/api/buyers/${userId}`);
         setUserData(userRes.data);
 
-        // Fetch crops listed by farmers from our database
+        // 1. Fetch crops
         const cropsRes = await axios.get('/api/crops');
-        // Only show crops that are 'Listed' (not already sold)
-        const availableCrops = cropsRes.data.filter(crop => crop.status === 'Listed' || !crop.status);
+
+        // Ensure cropsRes.data is actually an array
+        const cropsArray = Array.isArray(cropsRes.data) ? cropsRes.data : [];
+
+        // 2. Filter crops (Made case-insensitive and safer)
+        // REPLACE IT WITH THIS:
+        const availableCrops = cropsArray.filter(crop => 
+          !crop.status || 
+          crop.status.toLowerCase() === 'listed' || 
+          crop.status.toLowerCase() === 'available' || 
+          crop.status === 'Pending'
+        );
         
-        // Fetch farmer names for each crop
+        // 3. Populate Farmer Names Safely
         const populatedCrops = await Promise.all(availableCrops.map(async (crop) => {
           try {
+            // Only try to fetch farmer if farmerId exists
+            if (!crop.farmerId) throw new Error("No Farmer ID");
+            
             const farmerRes = await axios.get(`/api/farmers/${crop.farmerId}`);
             return { 
               ...crop, 
-              farmer_name: farmerRes.data.name,
-              location: `${farmerRes.data.address?.district || 'Unknown'}, ${farmerRes.data.address?.state || ''}`
+              farmer_name: farmerRes.data.name || 'Unknown Farmer',
+              location: farmerRes.data.address ? `${farmerRes.data.address.district || ''}, ${farmerRes.data.address.state || ''}` : 'Location Unavailable'
             };
           } catch (e) {
-            return { ...crop, farmer_name: 'Unknown Farmer', location: 'Unknown Location' };
+            return { ...crop, farmer_name: 'Unknown Farmer', location: 'Location Unavailable' };
           }
         }));
 
         setCrops(populatedCrops);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching marketplace data:", error);
       } finally {
         setLoadingCrops(false);
       }
@@ -72,23 +81,20 @@ const BuyerMarketplace = () => {
     navigate('/login');
   };
 
-  // 2. Fetch Live Prices from Agmarknet API
   const handleMarketSearch = async (e) => {
     e.preventDefault();
     setMarketLoading(true);
     try {
-      // Calls your backend route which securely fetches from Agmarknet
       const response = await axios.get('/api/market/prices', { params: marketSearch });
       setMarketPrices(response.data.records || []);
     } catch (error) {
       console.error("Error fetching market prices:", error);
-      alert("Failed to fetch live market prices. Please try again.");
+      alert("Failed to fetch live market prices.");
     } finally {
       setMarketLoading(false);
     }
   };
 
-  // 3. Bidding Functions
   const openBidModal = (crop) => {
     setSelectedCrop(crop);
     setBidAmount('');
@@ -111,13 +117,9 @@ const BuyerMarketplace = () => {
         date: new Date().toISOString().split('T')[0]
       };
       
-      // Save bid to database
       await axios.post('/api/bids/add', bidPayload);
-      
       alert(`Successfully placed a bid of ₹${bidAmount} for ${selectedCrop.crop_name}!`);
       closeBidModal();
-      
-      // Optionally remove the crop from the view so they don't bid twice
       setCrops(crops.filter(crop => crop._id !== selectedCrop._id));
     } catch (error) {
       console.error("Error submitting bid:", error);
@@ -125,16 +127,17 @@ const BuyerMarketplace = () => {
     }
   };
 
-  const filteredCrops = crops.filter(crop => 
-    crop.crop_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    crop.location?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Safe search filtering
+  const filteredCrops = crops.filter(crop => {
+    const cropNameMatch = crop.crop_name ? crop.crop_name.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+    const locationMatch = crop.location ? crop.location.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+    return cropNameMatch || locationMatch;
+  });
 
   const businessName = userData?.business_name || userData?.name || 'Buyer';
 
   return (
     <div className="landing-container">
-      {/* --- Navbar --- */}
       <nav className="navbar">
         <div className="navbar-brand">
           <Link to="/buyer/dashboard" style={{ textDecoration: 'none' }}><h1>AgriConnect</h1></Link>
@@ -147,7 +150,7 @@ const BuyerMarketplace = () => {
             <button className="profile-btn">{businessName} ▼</button>
             <div className="dropdown-content">
               <Link to="/buyer/profile">My Profile</Link>
-              <Link to="/buyer/dashboard">Overview Dashboard</Link>
+              <Link to="/buyer/overview">Overview Dashboard</Link>
               <button onClick={handleLogout} className="logout-btn">Log Out</button>
             </div>
           </div>
@@ -157,15 +160,16 @@ const BuyerMarketplace = () => {
       <main className="market-main">
         <div className="market-container">
           
-          {/* --- SECTION 1: Agmarknet Live Prices --- */}
           <div style={{ backgroundColor: '#e8f5e9', padding: '2rem', borderRadius: '8px', marginBottom: '3rem', border: '1px solid #c8e6c9' }}>
             <h2 style={{ color: '#1b5e20', marginBottom: '0.5rem' }}>Live Market Trends (Agmarknet)</h2>
-            <p style={{ color: '#2e7d32', marginBottom: '1.5rem' }}>Check official government mandi prices before placing your bids.</p>
+            <p style={{ color: '#2e7d32', marginBottom: '1.5rem' }}>
+              Check today's Mandi rates. <strong>Leave the commodity blank to view all crops in a region!</strong>
+            </p>
             
             <form onSubmit={handleMarketSearch} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-              <input type="text" placeholder="Commodity (e.g. Tomato)" value={marketSearch.commodity} onChange={e => setMarketSearch({...marketSearch, commodity: e.target.value})} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', flex: 1, minWidth: '200px' }} required />
-              <input type="text" placeholder="State (e.g. Andhra Pradesh)" value={marketSearch.state} onChange={e => setMarketSearch({...marketSearch, state: e.target.value})} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', flex: 1, minWidth: '200px' }} />
-              <input type="text" placeholder="District" value={marketSearch.district} onChange={e => setMarketSearch({...marketSearch, district: e.target.value})} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', flex: 1, minWidth: '200px' }} />
+              <input type="text" placeholder="Commodity (Optional)" value={marketSearch.commodity} onChange={e => setMarketSearch({...marketSearch, commodity: e.target.value})} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', flex: 1, minWidth: '200px' }} />
+              <input type="text" placeholder="State (Optional)" value={marketSearch.state} onChange={e => setMarketSearch({...marketSearch, state: e.target.value})} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', flex: 1, minWidth: '200px' }} />
+              <input type="text" placeholder="District (Optional)" value={marketSearch.district} onChange={e => setMarketSearch({...marketSearch, district: e.target.value})} style={{ padding: '0.8rem', borderRadius: '4px', border: '1px solid #ccc', flex: 1, minWidth: '200px' }} />
               <button type="submit" className="btn-primary" disabled={marketLoading} style={{ padding: '0 2rem' }}>
                 {marketLoading ? 'Searching...' : 'Check Prices'}
               </button>
@@ -197,24 +201,15 @@ const BuyerMarketplace = () => {
                 </table>
               </div>
             )}
-            {marketPrices.length === 0 && !marketLoading && (
-               <p style={{ color: '#666', fontSize: '0.9rem', fontStyle: 'italic' }}>Search to view live prices.</p>
-            )}
           </div>
 
-          {/* --- SECTION 2: Farmer Listings (Database) --- */}
           <div className="market-header">
             <div>
               <h2>Available Farmer Listings</h2>
               <p>Browse fresh produce listed directly by farmers and place your bids.</p>
             </div>
             <div className="search-box">
-              <input 
-                type="text" 
-                placeholder="Search local crops or locations..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input type="text" placeholder="Search local crops or locations..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
 
@@ -240,12 +235,6 @@ const BuyerMarketplace = () => {
                         <span className="detail-value">{crop.location}</span>
                       </div>
                       <div className="crop-detail">
-                        <span className="detail-label">Listed On:</span>
-                        <span className="detail-value" style={{ color: '#1565c0', fontWeight: 'bold' }}>
-                          {crop.listed_date || new Date().toISOString().split('T')[0]}
-                        </span>
-                      </div>
-                      <div className="crop-detail">
                         <span className="detail-label">Quantity:</span>
                         <span className="detail-value">{crop.quantity} Qtl</span>
                       </div>
@@ -261,8 +250,11 @@ const BuyerMarketplace = () => {
                   </div>
                 ))
               ) : (
-                <div className="no-results">
-                  <p>No crops currently listed by farmers.</p>
+                <div className="no-results" style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '1.2rem', color: '#666', marginBottom: '1rem' }}>No crops found.</p>
+                  <p style={{ fontSize: '0.9rem', color: '#888' }}>
+                    <strong>Developer Check:</strong> Right-click the page, select "Inspect", and go to the "Console" tab. Look for the message <code style={{color: 'red'}}>"RAW CROPS FROM DATABASE"</code> to see if the database is actually sending crops to the Buyer!
+                  </p>
                 </div>
               )}
             </div>
@@ -279,26 +271,14 @@ const BuyerMarketplace = () => {
               <button className="btn-close" onClick={closeBidModal}>&times;</button>
             </div>
             
-            <p className="modal-subtitle">
-              Bidding on <strong>{selectedCrop.quantity} Qtl</strong> of <strong>{selectedCrop.crop_name}</strong> from {selectedCrop.farmer_name}.
-            </p>
-            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>
-              Farmer's Expected Price: <strong>₹{selectedCrop.expected_price} / Qtl</strong>
-            </p>
+            <p className="modal-subtitle">Bidding on <strong>{selectedCrop.quantity} Qtl</strong> of <strong>{selectedCrop.crop_name}</strong>.</p>
+            <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1.5rem' }}>Farmer's Expected Price: <strong>₹{selectedCrop.expected_price} / Qtl</strong></p>
             
             <form onSubmit={handleBidSubmit} className="modal-form">
               <div className="form-group">
                 <label>Your Offer Price (₹ per Quintal)</label>
-                <input 
-                  type="number" 
-                  value={bidAmount} 
-                  onChange={(e) => setBidAmount(e.target.value)} 
-                  placeholder={`e.g., ${selectedCrop.expected_price - 100}`} 
-                  min="1"
-                  required 
-                />
+                <input type="number" value={bidAmount} onChange={(e) => setBidAmount(e.target.value)} min="1" required />
               </div>
-
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={closeBidModal}>Cancel</button>
                 <button type="submit" className="btn-primary">Submit Bid</button>
@@ -308,9 +288,7 @@ const BuyerMarketplace = () => {
         </div>
       )}
 
-      <footer className="footer" style={{ marginTop: 'auto' }}>
-        <p>&copy; {new Date().getFullYear()} AgriConnect. All rights reserved.</p>
-      </footer>
+      <footer className="footer" style={{ marginTop: 'auto' }}><p>&copy; {new Date().getFullYear()} AgriConnect. All rights reserved.</p></footer>
     </div>
   );
 };

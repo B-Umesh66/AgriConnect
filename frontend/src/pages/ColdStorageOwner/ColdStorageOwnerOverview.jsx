@@ -10,14 +10,9 @@ const ColdStorageOverview = () => {
   const userId = localStorage.getItem('userId');
   
   const [userData, setUserData] = useState(null);
-  const [stats, setStats] = useState({ totalCapacity: 0, utilizedCapacity: 0, pendingRequests: 4, monthlyRevenue: 0 });
+  const [stats, setStats] = useState({ totalCapacity: 0, utilizedCapacity: 0, pendingRequests: 0, monthlyRevenue: 0 });
+  const [activeAllocations, setActiveAllocations] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Still mocking active allocations until a Booking Schema is created in the backend
-  const activeAllocations = [
-    { id: 1, facility: 'Main Storage', farmer: 'Ramesh Kumar', crop: 'Tomatoes', weight: 50, validUntil: '2026-04-14' },
-    { id: 2, facility: 'North Facility', farmer: 'Srinivas', crop: 'Apples', weight: 200, validUntil: '2026-05-01' }
-  ];
 
   useEffect(() => {
     if (!userId) {
@@ -30,30 +25,38 @@ const ColdStorageOverview = () => {
         const userRes = await axios.get(`/api/cs_owners/${userId}`);
         setUserData(userRes.data);
 
-        // Fetch all facilities and filter by this owner
+        // Fetch facilities to calculate total capacity
         const storageRes = await axios.get('/api/cold-storages');
         const myFacilities = storageRes.data.filter(s => s.cs_ownerId === userId);
 
         let totalCap = 0;
-        let availableCap = 0;
-        let totalRevenue = 0;
-
         myFacilities.forEach(facility => {
-            const cap = Number(facility.total_capacity || facility.available_capacity || 0);
-            const avail = Number(facility.available_capacity || 0);
-            const utilized = cap - avail;
-            
-            totalCap += cap;
-            availableCap += avail;
-            totalRevenue += (utilized * Number(facility.price_per_ton || 0));
+            totalCap += Number(facility.total_capacity || 0);
+        });
+
+        // Fetch real bookings from the database
+        const bookingsRes = await axios.get(`/api/bookings?cs_ownerId=${userId}`);
+        const allBookings = bookingsRes.data;
+
+        // Calculate Real Stats
+        const approvedBookings = allBookings.filter(b => b.status === 'Approved');
+        
+        let utilized = 0;
+        let revenue = 0;
+        
+        approvedBookings.forEach(booking => {
+          utilized += Number(booking.weight);
+          revenue += (Number(booking.weight) * Number(booking.price_per_ton));
         });
 
         setStats({
           totalCapacity: totalCap,
-          utilizedCapacity: totalCap - availableCap,
-          pendingRequests: 4, // Placeholder until Booking route exists
-          monthlyRevenue: totalRevenue
+          utilizedCapacity: utilized,
+          pendingRequests: allBookings.filter(b => b.status === 'Pending').length,
+          monthlyRevenue: revenue
         });
+
+        setActiveAllocations(approvedBookings);
 
       } catch (error) {
         console.error("Failed to fetch overview data:", error);
@@ -86,10 +89,10 @@ const ColdStorageOverview = () => {
           <Link to="/storage/requests" className="nav-link">Farmer Requests</Link>
           <div className="nav-divider"></div>
           <div className="profile-menu">
-            <button className="profile-btn">{displayName} ▼</button>
+            <button className="profile-btn" style={{ color: '#1e88e5', fontWeight: 'bold' }}>{displayName} ▼</button>
             <div className="dropdown-content">
               <Link to="/storage/profile">My Owner Profile</Link>
-              <Link to="/storage/overview" style={{ color: '#2e7d32', backgroundColor: '#f0f9f0' }}>Business Overview</Link>
+              <Link to="/storage/overview" style={{ color: '#1e88e5', backgroundColor: '#e3f2fd' }}>Business Overview</Link>
               <button onClick={handleLogout} className="logout-btn">Log Out</button>
             </div>
           </div>
@@ -98,30 +101,36 @@ const ColdStorageOverview = () => {
 
       <main className="overview-main">
         <div className="overview-container">
-          <h2 className="overview-title">Business Overview</h2>
-          <p className="overview-subtitle">Track your facility utilization and revenue metrics.</p>
+          <h2 className="overview-title">Business Operations Overview</h2>
+          <p className="overview-subtitle">Track your facility utilization and revenue generation.</p>
 
           <div className="stats-grid">
             <div className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#e3f2fd' }}>📦</div>
+              <div className="stat-icon" style={{ backgroundColor: '#e8f5e9' }}>🏢</div>
               <h3>Total Capacity</h3>
-              <p className="stat-number text-primary">{stats.totalCapacity} Tons</p>
+              <p className="stat-number text-success">{stats.totalCapacity} <span style={{ fontSize: '1rem', color: '#666' }}>Tons</span></p>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#e8f5e9' }}>📈</div>
-              <h3>Utilization</h3>
-              <p className="stat-number text-success">{utilizationPercentage}%</p>
-              <div className="progress-bar-container"><div className="progress-bar-fill" style={{ width: `${utilizationPercentage}%` }}></div></div>
+              <div className="stat-icon" style={{ backgroundColor: '#e3f2fd' }}>📦</div>
+              <h3>Space Utilized</h3>
+              <p className="stat-number text-primary">{stats.utilizedCapacity} <span style={{ fontSize: '1rem', color: '#666' }}>Tons</span></p>
+              
+              <div className="progress-container">
+                <div className="progress-bar" style={{ width: `${utilizationPercentage}%`, backgroundColor: utilizationPercentage > 85 ? '#d32f2f' : '#1e88e5' }}></div>
+              </div>
+              <small>{utilizationPercentage}% Full</small>
             </div>
             <div className="stat-card">
               <div className="stat-icon" style={{ backgroundColor: '#fff3e0' }}>🔔</div>
               <h3>Pending Requests</h3>
-              <p className="stat-number" style={{ color: '#f57c00' }}>{stats.pendingRequests}</p>
+              <p className="stat-number text-warning" style={{ color: '#f57c00' }}>{stats.pendingRequests}</p>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ backgroundColor: '#f3e5f5' }}>💰</div>
+              <div className="stat-icon" style={{ backgroundColor: '#fce4ec' }}>₹</div>
               <h3>Est. Monthly Revenue</h3>
-              <p className="stat-number text-purple">₹{(stats.monthlyRevenue / 100000).toFixed(2)}L</p>
+              <p className="stat-number text-danger" style={{ fontSize: '1.8rem' }}>
+                ₹{(stats.monthlyRevenue / 100000).toFixed(2)}L
+              </p>
             </div>
           </div>
 
@@ -135,17 +144,17 @@ const ColdStorageOverview = () => {
                     <th>Farmer Name</th>
                     <th>Crop Stored</th>
                     <th>Weight (Tons)</th>
-                    <th>Valid Until</th>
+                    <th>Start Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {activeAllocations.map(item => (
-                    <tr key={item.id}>
-                      <td className="fw-bold text-primary">{item.facility}</td>
-                      <td>{item.farmer}</td>
+                    <tr key={item._id}>
+                      <td className="fw-bold text-primary">{item.facility_name}</td>
+                      <td>{item.farmer_name}</td>
                       <td>{item.crop}</td>
                       <td className="fw-bold">{item.weight}</td>
-                      <td style={{ color: '#666' }}>{item.validUntil}</td>
+                      <td style={{ color: '#666' }}>{item.from_date}</td>
                     </tr>
                   ))}
                 </tbody>

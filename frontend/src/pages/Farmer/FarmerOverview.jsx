@@ -7,39 +7,56 @@ import './FarmerOverview.css';
 
 const FarmerOverview = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  
   const [userData, setUserData] = useState(null);
+  const [stats, setStats] = useState({ totalListed: 0, acceptedBids: 0, rejectedBids: 0, inStorageCount: 0 });
+  const [storageDetails, setStorageDetails] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Still mocking stats until we build your Bid and Crop fetches
-  const stats = {
-    totalListed: 8,
-    acceptedBids: 3,
-    rejectedBids: 1,
-    inStorageCount: 2
-  };
-  const storageDetails = [
-    { id: 1, crop: 'Potatoes', quantity: 50, location: 'Wisdom Cold Storage' },
-    { id: 2, crop: 'Apples', quantity: 20, location: 'Kisan Fresh Vault' }
-  ];
-
   useEffect(() => {
-    const fetchUser = async () => {
+    if (!userId) {
+      navigate('/login');
+      return;
+    }
+
+    const fetchData = async () => {
       try {
-        const userId = localStorage.getItem('userId');
-        if (!userId) {
-          navigate('/login');
-          return;
-        }
-        const response = await axios.get(`/api/farmers/${userId}`);
-        setUserData(response.data);
+        const userRes = await axios.get(`/api/farmers/${userId}`);
+        setUserData(userRes.data);
+
+        // Fetch Data from DB
+        const [cropsRes, bidsRes, bookingsRes] = await Promise.all([
+          axios.get('/api/crops'),
+          axios.get('/api/bids'),
+          axios.get(`/api/bookings?farmerId=${userId}`)
+        ]);
+
+        // Calculate Real Stats
+        const myCrops = cropsRes.data.filter(c => c.farmerId === userId);
+        const myCropIds = myCrops.map(c => c._id);
+        
+        const myIncomingBids = bidsRes.data.filter(bid => myCropIds.includes(bid.cropId));
+        const approvedBookings = bookingsRes.data.filter(b => b.status === 'Approved');
+
+        setStats({
+          totalListed: myCrops.length,
+          acceptedBids: myIncomingBids.filter(b => b.status === 'Accepted' || b.status === 'Paid').length,
+          rejectedBids: myIncomingBids.filter(b => b.status === 'Rejected').length,
+          inStorageCount: approvedBookings.length
+        });
+
+        setStorageDetails(approvedBookings);
+
       } catch (error) {
-        console.error("Failed to fetch user data:", error);
+        console.error("Failed to fetch overview data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchUser();
-  }, [navigate]);
+
+    fetchData();
+  }, [userId, navigate]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -113,10 +130,10 @@ const FarmerOverview = () => {
                 </thead>
                 <tbody>
                   {storageDetails.map(item => (
-                    <tr key={item.id}>
+                    <tr key={item._id}>
                       <td className="fw-bold">{item.crop}</td>
-                      <td>{item.quantity}</td>
-                      <td>{item.location}</td>
+                      <td>{item.weight}</td>
+                      <td>{item.facility_name}</td>
                     </tr>
                   ))}
                 </tbody>

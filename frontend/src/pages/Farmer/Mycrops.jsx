@@ -7,11 +7,11 @@ import './FarmerCrops.css';
 
 const MyCrops = () => {
   const navigate = useNavigate();
+  const userId = localStorage.getItem('userId');
+  
   const [userData, setUserData] = useState(null);
   const [crops, setCrops] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const userId = localStorage.getItem('userId');
 
   useEffect(() => {
     if (!userId) {
@@ -21,11 +21,10 @@ const MyCrops = () => {
 
     const fetchData = async () => {
       try {
-        // Fetch user data for the navbar
         const userRes = await axios.get(`/api/farmers/${userId}`);
         setUserData(userRes.data);
 
-        // Fetch crops and filter to only show this farmer's crops
+        // Fetch all crops and filter to show ONLY this farmer's crops
         const cropsRes = await axios.get('/api/crops');
         const myCrops = cropsRes.data.filter(crop => crop.farmerId === userId);
         setCrops(myCrops);
@@ -48,9 +47,8 @@ const MyCrops = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete this crop listing?");
     if (confirmDelete) {
       try {
-        // Delete from database
+        // Actually delete it from the Database
         await axios.delete(`/api/crops/${id}`);
-        // Remove from UI
         setCrops(crops.filter(crop => crop._id !== id));
       } catch (error) {
         console.error("Error deleting crop:", error);
@@ -59,9 +57,9 @@ const MyCrops = () => {
     }
   };
 
-  const firstName = userData?.name ? userData.name.split(' ')[0] : 'Farmer';
-
   if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Loading your crops...</div>;
+
+  const firstName = userData?.name ? userData.name.split(' ')[0] : 'Farmer';
 
   return (
     <div className="landing-container">
@@ -116,7 +114,7 @@ const MyCrops = () => {
                       <td>{crop.quantity}</td>
                       <td className="text-success fw-bold">₹{crop.expected_price}</td>
                       <td>
-                        <span className={`status-badge ${(crop.status || 'listed').toLowerCase().replace(' ', '-')}`}>
+                        <span className={`status-badge ${(crop.status || 'Listed').toLowerCase().replace(' ', '-')}`}>
                           {crop.status || 'Listed'}
                         </span>
                       </td>
@@ -128,7 +126,7 @@ const MyCrops = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="text-center">You haven't listed any crops yet.</td>
+                    <td colSpan="6" className="text-center">You haven't listed any crops yet. Click "Add New Crop" to start!</td>
                   </tr>
                 )}
               </tbody>

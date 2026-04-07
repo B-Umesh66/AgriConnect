@@ -25,22 +25,34 @@ const BidsOffers = () => {
         const userRes = await axios.get(`/api/farmers/${userId}`);
         setUserData(userRes.data);
 
-        // 2. Fetch the Farmer's Crops so we can identify which bids belong to them
-        const cropsRes = await axios.get('/api/crops');
+        // 2. Fetch Crops, Bids, AND Buyers from the database at the same time
+        const [cropsRes, bidsRes, buyersRes] = await Promise.all([
+          axios.get('/api/crops'),
+          axios.get('/api/bids'),
+          axios.get('/api/buyers') // Fetching buyers to get their Business Names
+        ]);
+
         const myCrops = cropsRes.data.filter(c => c.farmerId === userId);
         const myCropIds = myCrops.map(c => c._id);
+        const allBuyers = buyersRes.data;
 
-        // 3. Fetch All Bids and map crop names to them
-        const bidsRes = await axios.get('/api/bids');
+        // 3. Map crop names and buyer names to the bids
         const myBids = bidsRes.data
           .filter(bid => myCropIds.includes(bid.cropId))
           .map(bid => {
              const matchedCrop = myCrops.find(c => c._id === bid.cropId);
+             
+             // MATCH THE BUYER: Find the buyer whose ID matches the bid's buyerId
+             const matchedBuyer = allBuyers.find(b => b._id === bid.buyerId);
+             
              return {
                ...bid,
                crop_name: matchedCrop ? matchedCrop.crop_name : 'Unknown Crop',
                quantity: matchedCrop ? matchedCrop.quantity : 0,
-               buyer_name: bid.buyer_name || 'AgriConnect Buyer', 
+               
+               // DYNAMIC BUYER NAME: Use business_name, fallback to name, fallback to 'Unknown Buyer'
+               buyer_name: matchedBuyer ? (matchedBuyer.business_name || matchedBuyer.name) : 'Unknown Buyer', 
+               
                status: bid.status || 'Pending',
                date: bid.date || new Date().toISOString().split('T')[0]
              };
@@ -62,11 +74,23 @@ const BidsOffers = () => {
     navigate('/login');
   };
 
-  const handleStatusUpdate = async (id, newStatus) => {
+  // --- ENSURED FIX: Now receives cropId and updates the Crop database ---
+  const handleStatusUpdate = async (id, newStatus, cropId) => {
     try {
+      // Update the Bid's status
       await axios.put(`/api/bids/${id}`, { status: newStatus });
+      
+      // Update the Crop's status to 'Sold' so it disappears from Marketplace
+      if (newStatus === 'Accepted' && cropId) {
+        await axios.put(`/api/crops/${cropId}`, { status: 'Sold' });
+        alert("Offer accepted! The crop has been marked as Sold and removed from the marketplace. Waiting for the buyer to complete payment.");
+      } else if (newStatus === 'Rejected') {
+        alert("Offer rejected.");
+      }
+
+      // Update the local UI state
       setBids(bids.map(bid => bid._id === id ? { ...bid, status: newStatus } : bid));
-      if (newStatus === 'Accepted') alert("Offer accepted! Waiting for the buyer to complete payment.");
+      
     } catch (error) {
       console.error(`Failed to mark bid as ${newStatus}:`, error);
       alert("Failed to update status.");
@@ -168,7 +192,7 @@ const BidsOffers = () => {
                   </div>
                   
                   <div className="bid-card-body">
-                    <div className="bid-detail"><span className="detail-label">Buyer:</span><span className="detail-value">{bid.buyer_name}</span></div>
+                    <div className="bid-detail"><span className="detail-label">Buyer:</span><span className="detail-value" style={{fontWeight: 'bold', color: '#1565c0'}}>{bid.buyer_name}</span></div>
                     <div className="bid-detail"><span className="detail-label">Quantity:</span><span className="detail-value">{bid.quantity} Qtl</span></div>
                     <div className="bid-detail"><span className="detail-label">Date:</span><span className="detail-value">{bid.date}</span></div>
                     <div className="bid-detail amount"><span className="detail-label">Offer Rate:</span><span className="detail-value price">₹{bid.bid_amount} / Qtl</span></div>
@@ -176,8 +200,9 @@ const BidsOffers = () => {
 
                   {bid.status === 'Pending' && (
                     <div className="bid-card-actions">
-                      <button className="btn-accept" onClick={() => handleStatusUpdate(bid._id, 'Accepted')}>Accept Offer</button>
-                      <button className="btn-reject" onClick={() => handleStatusUpdate(bid._id, 'Rejected')}>Reject</button>
+                      {/* PASSED bid.cropId TO THE FUNCTION */}
+                      <button className="btn-accept" onClick={() => handleStatusUpdate(bid._id, 'Accepted', bid.cropId)}>Accept Offer</button>
+                      <button className="btn-reject" onClick={() => handleStatusUpdate(bid._id, 'Rejected', bid.cropId)}>Reject</button>
                     </div>
                   )}
 
