@@ -16,6 +16,11 @@ describe('AgriConnect API Endpoints', () => {
     let testBidId;
     let testStorageId;
 
+    // Variables to store JWT tokens for authentication
+    let farmerToken;
+    let buyerToken;
+    let csOwnerToken;
+
     beforeAll(async () => {
         await connectDB();
     });
@@ -42,6 +47,7 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
             expect(res.body).toHaveProperty('token');
             expect(res.body.role).toBe('Farmer');
+            farmerToken = res.body.token; // Store token for later use
         });
         it('should reject login with an unregistered phone number', async () => {
             const res = await request(app).post('/api/auth/login').send({
@@ -60,11 +66,16 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
         });
         it('should update a farmer by ID (PUT /:id)', async () => {
-            const res = await request(app).put(`/api/farmers/${testFarmerId}`).send({ no_of_acres: 10 });
+            const res = await request(app)
+                .put(`/api/farmers/${testFarmerId}`)
+                .set('Authorization', `Bearer ${farmerToken}`)
+                .send({ no_of_acres: 10 });
             expect(res.statusCode).toEqual(200);
         });
         it('should delete a farmer by ID (DELETE /:id)', async () => {
-            const res = await request(app).delete(`/api/farmers/${testFarmerId}`);
+            const res = await request(app)
+                .delete(`/api/farmers/${testFarmerId}`)
+                .set('Authorization', `Bearer ${farmerToken}`);
             expect(res.statusCode).toEqual(200);
         });
     });
@@ -86,6 +97,7 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
             expect(res.body).toHaveProperty('token');
             expect(res.body.role).toBe('Buyer');
+            buyerToken = res.body.token; // Store token for later use
         });
         it('should reject login with an unregistered email', async () => {
             const res = await request(app).post('/api/auth/login').send({
@@ -104,11 +116,16 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
         });
         it('should update a buyer by ID (PUT /:id)', async () => {
-            const res = await request(app).put(`/api/buyers/${testBuyerId}`).send({ contact: "9999999999" });
+            const res = await request(app)
+                .put(`/api/buyers/${testBuyerId}`)
+                .set('Authorization', `Bearer ${buyerToken}`)
+                .send({ contact: "9999999999" });
             expect(res.statusCode).toEqual(200);
         });
         it('should delete a buyer by ID (DELETE /:id)', async () => {
-            const res = await request(app).delete(`/api/buyers/${testBuyerId}`);
+            const res = await request(app)
+                .delete(`/api/buyers/${testBuyerId}`)
+                .set('Authorization', `Bearer ${buyerToken}`);
             expect(res.statusCode).toEqual(200);
         });
     });
@@ -130,6 +147,7 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
             expect(res.body).toHaveProperty('token');
             expect(res.body.role).toBe('Cold Storage Owner');
+            csOwnerToken = res.body.token; // Store token for later use
         });
         it('should reject login with an unregistered email', async () => {
             const res = await request(app).post('/api/auth/login').send({
@@ -148,11 +166,16 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
         });
         it('should update a CS owner by ID (PUT /:id)', async () => {
-            const res = await request(app).put(`/api/cs_owners/${testCSOwnerId}`).send({ name: "Madhav Updated" });
+            const res = await request(app)
+                .put(`/api/cs_owners/${testCSOwnerId}`)
+                .set('Authorization', `Bearer ${csOwnerToken}`)
+                .send({ name: "Madhav Updated" });
             expect(res.statusCode).toEqual(200);
         });
         it('should delete a CS owner by ID (DELETE /:id)', async () => {
-            const res = await request(app).delete(`/api/cs_owners/${testCSOwnerId}`);
+            const res = await request(app)
+                .delete(`/api/cs_owners/${testCSOwnerId}`)
+                .set('Authorization', `Bearer ${csOwnerToken}`);
             expect(res.statusCode).toEqual(200);
         });
     });
@@ -160,7 +183,10 @@ describe('AgriConnect API Endpoints', () => {
     // --- CROP API TESTS ---
     describe('Crop API', () => {
         it('should list a new crop (POST)', async() => {
-            const res = await request(app).post('/api/crops/add').send({ farmerId: "Dummy farmer ID 123", crop_name: "Test rice", quantity: 50, expected_price: 25000 });
+            const res = await request(app)
+                .post('/api/crops/add')
+                .set('Authorization', `Bearer ${farmerToken}`)
+                .send({ farmerId: testFarmerId, crop_name: "Test rice", quantity: 50, expected_price: 25000 });
             expect(res.statusCode).toEqual(201);
             testCropId = res.body.cropId; 
         });
@@ -173,11 +199,16 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
         });
         it('should update a crop by ID (PUT /:id)', async () => {
-            const res = await request(app).put(`/api/crops/${testCropId}`).send({ expected_price: 26000 });
+            const res = await request(app)
+                .put(`/api/crops/${testCropId}`)
+                .set('Authorization', `Bearer ${farmerToken}`)
+                .send({ expected_price: 26000 });
             expect(res.statusCode).toEqual(200);
         });
         it('should delete a crop by ID (DELETE /:id)', async () => {
-            const res = await request(app).delete(`/api/crops/${testCropId}`);
+            const res = await request(app)
+                .delete(`/api/crops/${testCropId}`)
+                .set('Authorization', `Bearer ${farmerToken}`);
             expect(res.statusCode).toEqual(200);
         });
     });
@@ -185,7 +216,10 @@ describe('AgriConnect API Endpoints', () => {
     // --- BID API TESTS ---
     describe('Bid API', () => {
         it('should register a new bid (POST)', async() => {
-            const res = await request(app).post('/api/bids/add').send({ buyerId: "Dummy buyer 123", cropId: "Dummy crop id", bid_amount: 50000 });
+            const res = await request(app)
+                .post('/api/bids/add')
+                .set('Authorization', `Bearer ${buyerToken}`)
+                .send({ buyerId: testBuyerId, cropId: testCropId, bid_amount: 50000 });
             expect(res.statusCode).toEqual(201);
             testBidId = res.body.bidId;
         });
@@ -198,11 +232,16 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
         });
         it('should update a bid by ID (PUT /:id)', async () => {
-            const res = await request(app).put(`/api/bids/${testBidId}`).send({ bid_amount: 55000, status: "Accepted" });
+            const res = await request(app)
+                .put(`/api/bids/${testBidId}`)
+                .set('Authorization', `Bearer ${buyerToken}`)
+                .send({ bid_amount: 55000, status: "Accepted" });
             expect(res.statusCode).toEqual(200);
         });
         it('should delete a bid by ID (DELETE /:id)', async () => {
-            const res = await request(app).delete(`/api/bids/${testBidId}`);
+            const res = await request(app)
+                .delete(`/api/bids/${testBidId}`)
+                .set('Authorization', `Bearer ${buyerToken}`);
             expect(res.statusCode).toEqual(200);
         });
     });
@@ -210,7 +249,10 @@ describe('AgriConnect API Endpoints', () => {
     // --- COLD STORAGE API TESTS ---
     describe('Cold Storage API', () => {
         it("should return a new cold storage (POST)", async() => {
-            const res = await request(app).post('/api/cold-storages/add').send({ cs_ownerId: "Dummy cs owner 123", name: "wisdom cold storage", available_capacity: 500, price_per_ton: 1500 });
+            const res = await request(app)
+                .post('/api/cold-storages/add')
+                .set('Authorization', `Bearer ${csOwnerToken}`)
+                .send({ cs_ownerId: testCSOwnerId, name: "wisdom cold storage", available_capacity: 500, price_per_ton: 1500 });
             expect(res.statusCode).toEqual(201);
             testStorageId = res.body.storageId;
         });
@@ -223,11 +265,16 @@ describe('AgriConnect API Endpoints', () => {
             expect(res.statusCode).toEqual(200);
         });
         it('should update a cold storage by ID (PUT /:id)', async () => {
-            const res = await request(app).put(`/api/cold-storages/${testStorageId}`).send({ available_capacity: 450 });
+            const res = await request(app)
+                .put(`/api/cold-storages/${testStorageId}`)
+                .set('Authorization', `Bearer ${csOwnerToken}`)
+                .send({ available_capacity: 450 });
             expect(res.statusCode).toEqual(200);
         });
         it('should delete a cold storage by ID (DELETE /:id)', async () => {
-            const res = await request(app).delete(`/api/cold-storages/${testStorageId}`);
+            const res = await request(app)
+                .delete(`/api/cold-storages/${testStorageId}`)
+                .set('Authorization', `Bearer ${csOwnerToken}`);
             expect(res.statusCode).toEqual(200);
         });
     });
