@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_HOST = 'tcp://localhost:2375'
+        DOCKER_USERNAME='shanmuk2309'
     }
 
     stages {
@@ -31,8 +32,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 echo 'Building backend and frontend Docker images...'
-                bat 'docker build -t DOCKER_USERNAME/agriconnect-backend:latest .'
-                bat 'docker build -t DOCKER_USERNAME/agriconnect-frontend:latest ./frontend'
+                bat 'docker build -t %DOCKER_USERNAME%/agriconnect-backend:latest .'
+                bat 'docker build -t %DOCKER_USERNAME%/agriconnect-frontend:latest ./frontend'
             }
         }
 
@@ -43,8 +44,8 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
                     bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
                 }
-                bat 'docker push DOCKER_USERNAME/agriconnect-backend:latest'
-                bat 'docker push DOCKER_USERNAME/agriconnect-frontend:latest'
+                bat 'docker push %DOCKER_USERNAME%/agriconnect-backend:latest'
+                bat 'docker push %DOCKER_USERNAME%/agriconnect-frontend:latest'
             }
         }
     }
