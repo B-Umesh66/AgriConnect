@@ -27,8 +27,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 echo 'Building backend and frontend Docker images...'
-                bat 'docker build -t YOUR_DOCKER_USERNAME/agriconnect-backend:latest .'
-                bat 'docker build -t YOUR_DOCKER_USERNAME/agriconnect-frontend:latest ./frontend'
+                bat 'docker build -t DOCKER_USERNAME/agriconnect-backend:latest .'
+                bat 'docker build -t DOCKER_USERNAME/agriconnect-frontend:latest ./frontend'
             }
         }
 
