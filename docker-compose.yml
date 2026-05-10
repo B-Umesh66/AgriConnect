@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: AgriDB
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - app-network
+
+  backend:
+    build: .
+    container_name: backend
+    restart: always
+    ports:
+      - "5500:5500"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/AgriDB
+      - JWT_SECRET=ab55cc7adf416bfb12997c54c2589df9ee35dbc87e5d6854765d5d321dd9d9bbdf0963a1e7160abab791ae244a06b58ed9c97250078ed7adacc2f10e61f80652
+      - AGMARKET_API_KEY=579b464db66ec23bdd000001c7a7bfb242e2405a57680d6db91c5945
+    depends_on:
+      - mongo
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  mongo_data:
+
+networks:
+  app-network:
+    driver: bridge
