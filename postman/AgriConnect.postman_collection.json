@@ -1,0 +1,682 @@
+{
+  "info": {
+    "_postman_id": "25af890f-2f37-42f5-a459-2c52f27ddaa8",
+    "name": "AgriConnect",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53022318",
+    "_collection_link": "https://go.postman.co/collection/53022318-25af890f-2f37-42f5-a459-2c52f27ddaa8?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Farmer",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \r\n  \"name\": \"Ramesh Kumar\", \r\n  \"contact\": \"9876543210\", \r\n  \"email\": \"ramesh.test@example.com\", \r\n  \"password\": \"securepassword123\", \r\n  \"no_of_acres\": 5, \r\n  \"address\": { \r\n    \"d_no\": \"4-45/2\", \r\n    \"village\": \"Annavaram\", \r\n    \"mandal\": \"Sankhavaram\", \r\n    \"district\": \"Kakinada\", \r\n    \"state\": \"Andhra Pradesh\", \r\n    \"pincode\": \"533406\" \r\n  } \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/farmers/add",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "farmers",
+                "add"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"identifier\": \"9876543210\", \r\n  \"password\": \"securepassword123\",\r\n  \"userType\": \"Farmer\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All farmers",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \r\n  \"name\": \"Ramesh Kumar\", \r\n  \"contact\": \"9876543210\", \r\n  \"email\": \"ramesh.test@example.com\", \r\n  \"password\": \"securepassword123\", \r\n  \"no_of_acres\": 5, \r\n  \"address\": { \r\n    \"d_no\": \"4-45/2\", \r\n    \"village\": \"Annavaram\", \r\n    \"mandal\": \"Sankhavaram\", \r\n    \"district\": \"Kakinada\", \r\n    \"state\": \"Andhra Pradesh\", \r\n    \"pincode\": \"533406\" \r\n  } \r\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/farmers",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "farmers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Particular farmer",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \r\n  \"name\": \"Ramesh Kumar\", \r\n  \"contact\": \"9876543210\", \r\n  \"email\": \"ramesh.test@example.com\", \r\n  \"password\": \"securepassword123\", \r\n  \"no_of_acres\": 5, \r\n  \"address\": { \r\n    \"d_no\": \"4-45/2\", \r\n    \"village\": \"Annavaram\", \r\n    \"mandal\": \"Sankhavaram\", \r\n    \"district\": \"Kakinada\", \r\n    \"state\": \"Andhra Pradesh\", \r\n    \"pincode\": \"533406\" \r\n  } \r\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/farmers/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "farmers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e1027a314cac40b37d54"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Farmet",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMDFlMTAyN2EzMTRjYWM0MGIzN2Q1NCIsInJvbGUiOiJGYXJtZXIiLCJpYXQiOjE3Nzg1MDgwNDcsImV4cCI6MTc3ODU5NDQ0N30.9JAiVnUN54KQJqNOVEqsGKXyE34jz9Xk7J-ldorSUKc",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"no_of_acres\": 10 }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/farmers/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "farmers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e1027a314cac40b37d54"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Farmer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMDFlMTAyN2EzMTRjYWM0MGIzN2Q1NCIsInJvbGUiOiJGYXJtZXIiLCJpYXQiOjE3Nzg1MDgwNDcsImV4cCI6MTc3ODU5NDQ0N30.9JAiVnUN54KQJqNOVEqsGKXyE34jz9Xk7J-ldorSUKc",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"no_of_acres\": 10 }"
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/farmers/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "farmers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e1027a314cac40b37d54"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Buyer",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \r\n  \"name\": \"Ravi Kumar\", \r\n  \"contact\": \"9293472399\", \r\n  \"email\": \"ravi.test@example.com\", \r\n  \"password\": \"securepassword123\", \r\n  \"address\": { \r\n    \"d_no\": \"12-3B\", \r\n    \"village\": \"Velangi\", \r\n    \"mandal\": \"Pithapuram\", \r\n    \"district\": \"Kakinada\", \r\n    \"state\": \"Andhra Pradesh\", \r\n    \"pincode\": \"533450\" \r\n  } \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/buyers/add",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "buyers",
+                "add"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"identifier\": \"ravi.test@example.com\",\r\n  \"password\": \"securepassword123\",       \r\n  \"userType\": \"Buyer\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All Buyers",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \r\n  \"name\": \"Ravi Kumar\", \r\n  \"contact\": \"9293472399\", \r\n  \"email\": \"ravi.test@example.com\", \r\n  \"password\": \"securepassword123\", \r\n  \"address\": { \r\n    \"d_no\": \"12-3B\", \r\n    \"village\": \"Velangi\", \r\n    \"mandal\": \"Pithapuram\", \r\n    \"district\": \"Kakinada\", \r\n    \"state\": \"Andhra Pradesh\", \r\n    \"pincode\": \"533450\" \r\n  } \r\n}"
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/buyers",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "buyers"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Particular Buyer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/buyers/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "buyers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e2cd7a314cac40b37d55"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Buyer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMDFlMmNkN2EzMTRjYWM0MGIzN2Q1NSIsInJvbGUiOiJCdXllciIsImlhdCI6MTc3ODUwODY5OSwiZXhwIjoxNzc4NTk1MDk5fQ.oEog3Sv-CatSaebWRd1vUe0l5hVB9KJiXWnPCsSoS10",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"contact\": \"9999999999\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/buyers/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "buyers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e2cd7a314cac40b37d55"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Buyer",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMDFlMmNkN2EzMTRjYWM0MGIzN2Q1NSIsInJvbGUiOiJCdXllciIsImlhdCI6MTc3ODUwODY5OSwiZXhwIjoxNzc4NTk1MDk5fQ.oEog3Sv-CatSaebWRd1vUe0l5hVB9KJiXWnPCsSoS10",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/buyers/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "buyers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e2cd7a314cac40b37d55"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CS Owner",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \r\n  \"name\": \"Madhav\", \r\n  \"contact\": \"9934561245\", \r\n  \"email\": \"madhav.test@example.com\", \r\n  \"password\": \"securePassword123\" \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/cs_owners/add",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "cs_owners",
+                "add"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"identifier\": \"madhav.test@example.com\", \r\n  \"password\": \"securePassword123\",\r\n  \"userType\": \"Cold Storage Owner\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "All CS Owners",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/cs_owners",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "cs_owners"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Particular CS Owner",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/cs_owners/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "cs_owners",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e5057a314cac40b37d56"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update cs owner",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMDFlNTA1N2EzMTRjYWM0MGIzN2Q1NiIsInJvbGUiOiJDb2xkIFN0b3JhZ2UgT3duZXIiLCJpYXQiOjE3Nzg1MDkwNjksImV4cCI6MTc3ODU5NTQ2OX0.oC2PSyfhvZGjpgk41g_57DEh6-yKbdEpMIuay5AsWsE",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"name\": \"Madhav Singhania\" }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:5500/api/cs_owners/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "cs_owners",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e5057a314cac40b37d56"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete cs owner",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhMDFlNTA1N2EzMTRjYWM0MGIzN2Q1NiIsInJvbGUiOiJDb2xkIFN0b3JhZ2UgT3duZXIiLCJpYXQiOjE3Nzg1MDkwNjksImV4cCI6MTc3ODU5NTQ2OX0.oC2PSyfhvZGjpgk41g_57DEh6-yKbdEpMIuay5AsWsE",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5500/api/cs_owners/:id",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "5500",
+              "path": [
+                "api",
+                "cs_owners",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "6a01e5057a314cac40b37d56"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5500/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5500",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Market Prices",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"state\": \"Andhra Pradesh\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:5500/api/market/prices",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5500",
+          "path": [
+            "api",
+            "market",
+            "prices"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

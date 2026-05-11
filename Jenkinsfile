@@ -44,6 +44,14 @@ pipeline {
             }
         }
 
+        stage('API Tests (Newman)') {
+            steps {
+                echo 'Running Postman/Newman API tests...'
+                bat 'npm run test:api-ci'
+            }
+        }
+
+
         stage('Build Docker Images') {
             steps {
                 echo 'Building backend and frontend Docker images...'

@@ -8,7 +8,8 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "perf": "node perf-test.js",
-    "test:perf": "start-server-and-test start http://localhost:5500/health perf"
+    "test:perf": "start-server-and-test start http://localhost:5500/health perf",
+    "test:api": "newman run ./postman/AgriConnect.postman_collection.json"
   },
   "keywords": [],
   "author": "",
@@ -32,6 +33,7 @@
     "autocannon": "^8.0.0",
     "jest": "^30.2.0",
     "jsdom": "^29.0.2",
+    "newman": "^6.2.2",
     "start-server-and-test": "^2.0.3",
     "supertest": "^6.3.4",
     "vitest": "^4.1.4"
