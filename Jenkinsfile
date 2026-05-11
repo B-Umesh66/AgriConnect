@@ -40,7 +40,7 @@ pipeline {
             steps {
                 echo 'Running performance tests with dynamic JWT token...'
                 // Ensure your server is running before this stage or start it in the background
-                bat 'npm run perf'
+                bat 'npm run test:perf'
             }
         }
 
