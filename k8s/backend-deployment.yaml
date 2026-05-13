@@ -16,6 +16,11 @@ spec:
       labels:
         app: backend
 
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5500"
+        prometheus.io/path: "/metrics"
+
     spec:
       containers:
         - name: backend
@@ -28,3 +33,12 @@ spec:
           envFrom:
             - secretRef:
                 name: backend-secret
+
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+
+            limits:
+              memory: "256Mi"
+              cpu: "500m"

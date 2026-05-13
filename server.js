@@ -19,6 +19,18 @@ const app = express();
 app.use(express.json());
 app.use(cors()); // Enabled CORS
 
+const promBundle = require("express-prom-bundle");
+
+const metricsMiddleware = promBundle({
+  includeMethod: true,
+  includePath: true,
+  promClient: {
+    collectDefaultMetrics: {}
+  }
+});
+
+app.use(metricsMiddleware);
+
 const db = client.db("AgriDB");
 
 app.get('/health', (req, res) => {
