@@ -5,6 +5,9 @@ global.TextDecoder = TextDecoder;
 const request = require('supertest');
 const app = require('./server');
 const { connectDB, client } = require('./db');
+const axios = require('axios');
+
+jest.mock('axios');
 
 jest.setTimeout(30000);
 
@@ -430,6 +433,15 @@ describe('AgriConnect API Endpoints', () => {
     // --- MARKET API TESTS ---
     describe('Market API', () => {
         it('should fetch live market prices from Agmarknet ', async () => {
+            // Mock the external API response to prevent network issues during testing
+            axios.get.mockResolvedValue({
+                data: {
+                    records: [
+                        { commodity: 'Tomato', state: 'Andhra Pradesh', district: 'Chittoor', modal_price: 2500 }
+                    ]
+                }
+            });
+
             const res = await request(app).post('/api/market/prices').send({
                 commodity: 'Tomato',
                 state: 'Andhra Pradesh',
